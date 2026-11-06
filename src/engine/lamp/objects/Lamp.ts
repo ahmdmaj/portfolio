@@ -1,5 +1,4 @@
 import * as THREE from "three";
-import { CONFIG } from "../config";
 import { Bulb } from "./Bulb";
 
 export class Lamp {
