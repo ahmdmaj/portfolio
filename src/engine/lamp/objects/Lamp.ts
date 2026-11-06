@@ -4,6 +4,7 @@ import { Bulb } from "./Bulb";
 export class Lamp {
   public readonly group: THREE.Group;       // Top pivot group at ceiling
   public readonly swingGroup: THREE.Group;  // Swiveling body (for pendulum in Phase 6)
+  public readonly socketGroup: THREE.Group; // Socket assembly housing
   public readonly shadeMesh: THREE.Mesh;
   public readonly socketMesh: THREE.Mesh;
   public readonly cableMesh: THREE.Mesh;
@@ -41,14 +42,14 @@ export class Lamp {
     this.geometries.push(cableGeom);
     this.materials.push(cableMat);
     this.cableMesh = new THREE.Mesh(cableGeom, cableMat);
-    // Cable center is half-way down the length
     this.cableMesh.position.set(0, -cableLength / 2, 0);
+    this.cableMesh.castShadow = true;
     this.swingGroup.add(this.cableMesh);
 
     // 3. Socket assembly housing at the bottom of the cable
     const socketY = -cableLength;
-    const socketGroup = new THREE.Group();
-    socketGroup.position.set(0, socketY, 0);
+    this.socketGroup = new THREE.Group();
+    this.socketGroup.position.set(0, socketY, 0);
 
     // Top cord relief ferrule
     const ferruleGeom = new THREE.CylinderGeometry(0.045, 0.045, 0.14, 16);
@@ -61,7 +62,8 @@ export class Lamp {
     this.materials.push(brassMat);
     const ferrule = new THREE.Mesh(ferruleGeom, brassMat);
     ferrule.position.set(0, 0.07, 0);
-    socketGroup.add(ferrule);
+    ferrule.castShadow = true;
+    this.socketGroup.add(ferrule);
 
     // Main socket housing
     const socketGeom = new THREE.CylinderGeometry(0.18, 0.18, 0.32, 24);
@@ -74,11 +76,11 @@ export class Lamp {
     this.materials.push(darkMetalMat);
     this.socketMesh = new THREE.Mesh(socketGeom, darkMetalMat);
     this.socketMesh.position.set(0, -0.16, 0);
-    socketGroup.add(this.socketMesh);
+    this.socketMesh.castShadow = true;
+    this.socketGroup.add(this.socketMesh);
 
     // 4. Industrial dome-shaped shade using LatheGeometry with realistic thickness & rolled rim
     const shadePoints: THREE.Vector2[] = [];
-    // Outer surface profile (from neck down to flared rim)
     shadePoints.push(new THREE.Vector2(0.18, 0.15));
     shadePoints.push(new THREE.Vector2(0.24, 0.10));
     shadePoints.push(new THREE.Vector2(0.38, 0.02));
@@ -87,7 +89,6 @@ export class Lamp {
     shadePoints.push(new THREE.Vector2(0.96, -0.60));
     shadePoints.push(new THREE.Vector2(1.00, -0.66)); // Outer rolled rim lip
     shadePoints.push(new THREE.Vector2(0.98, -0.68)); // Bottom edge of rolled rim
-    // Inner surface profile (returning up with geometric thickness)
     shadePoints.push(new THREE.Vector2(0.94, -0.65));
     shadePoints.push(new THREE.Vector2(0.82, -0.42));
     shadePoints.push(new THREE.Vector2(0.59, -0.18));
@@ -108,14 +109,16 @@ export class Lamp {
 
     this.shadeMesh = new THREE.Mesh(shadeGeom, shadeMat);
     this.shadeMesh.position.set(0, -0.16, 0);
-    socketGroup.add(this.shadeMesh);
+    this.shadeMesh.castShadow = true;
+    this.shadeMesh.receiveShadow = false;
+    this.socketGroup.add(this.shadeMesh);
 
     // 5. Bulb child object placed inside the socket
     this.bulb = new Bulb();
     this.bulb.group.position.set(0, -0.32, 0);
-    socketGroup.add(this.bulb.group);
+    this.socketGroup.add(this.bulb.group);
 
-    this.swingGroup.add(socketGroup);
+    this.swingGroup.add(this.socketGroup);
   }
 
   public setPosition(x: number, y: number): void {
