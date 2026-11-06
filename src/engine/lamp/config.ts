@@ -13,6 +13,8 @@ export const CONFIG = {
     slingshotWood: 0x8b5a2b,
     elasticBand: 0xd97706,
     stone: 0x71717a,
+    ledOn: 0x22c55e,
+    ledOff: 0xef4444,
     gridLine: 0x1d1f23,
     placeholder: 0xe0b87a,
   },
@@ -60,6 +62,14 @@ export const CONFIG = {
     shadeRadius: 0.85,
     shadeHeight: 0.7,
     bulbRadius: 0.28,
+  },
+
+  // Wall Switch specs
+  wallSwitch: {
+    rockerAngleMax: 0.28,
+    width: 0.95,
+    height: 1.45,
+    depth: 0.12,
   },
 
   // Slingshot specs
