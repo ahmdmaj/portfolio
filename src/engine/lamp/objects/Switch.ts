@@ -32,6 +32,8 @@ export class Switch {
     this.materials.push(plateMat);
 
     this.plateMesh = new THREE.Mesh(plateGeom, plateMat);
+    this.plateMesh.castShadow = true;
+    this.plateMesh.receiveShadow = true;
     this.group.add(this.plateMesh);
 
     // 2. Beveled inner bezel frame (recess for rocker)
