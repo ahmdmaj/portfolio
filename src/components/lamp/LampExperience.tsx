@@ -83,20 +83,20 @@ export const LampExperience: React.FC = () => {
       <LampHUD state={lampState} onToggleSound={handleToggleSound} />
 
       {/* Upper-Center Small Monospace Time Label under Lamp */}
-      <div className="absolute left-1/2 -translate-x-1/2 top-[34vh] pointer-events-none z-20">
-        <span className="font-mono text-[11px] uppercase tracking-wider text-muted/70 px-2 py-0.5 rounded border border-muted/10 bg-bg/40 backdrop-blur-sm">
+      <div className="absolute left-1/2 -translate-x-1/2 top-[24vh] sm:top-[26vh] pointer-events-none z-20">
+        <span className="font-mono text-[11px] uppercase tracking-wider text-muted/70 px-2.5 py-1 rounded border border-muted/10 bg-bg/60 backdrop-blur-sm shadow-sm">
           {COPY.lampMeta.timeLabel}
         </span>
       </div>
 
       {/* Centered Editorial Headline & Supporting Copy */}
-      <div className="absolute inset-x-0 top-[44vh] -translate-y-1/2 flex flex-col items-center justify-center text-center px-6 pointer-events-none z-20">
+      <div className="absolute inset-x-0 top-[56vh] sm:top-[58vh] -translate-y-1/2 flex flex-col items-center justify-center text-center px-6 pointer-events-none z-20">
         <h1 className="text-5xl sm:text-7xl md:text-8xl font-black tracking-tightest leading-[0.95] max-w-4xl text-text font-grotesk">
           {COPY.headline.line1} <br className="hidden sm:inline" />
           <span className="text-accent">{COPY.headline.accentWord}</span>
         </h1>
 
-        <div className="mt-6 space-y-1 max-w-lg text-xs sm:text-sm text-muted/80 font-normal leading-relaxed">
+        <div className="mt-5 space-y-1 max-w-lg text-xs sm:text-sm text-muted/80 font-normal leading-relaxed">
           <p>{COPY.headline.subcopyLine1}</p>
           <p className="hidden sm:block text-muted/60">{COPY.headline.subcopyLine2}</p>
         </div>
