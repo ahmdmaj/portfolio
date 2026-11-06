@@ -14,13 +14,13 @@ export class Wall {
     this.geometry = new THREE.PlaneGeometry(worldWidth, worldHeight);
     this.material = new THREE.MeshStandardMaterial({
       color: CONFIG.colors.bg,
-      roughness: 0.95,
-      metalness: 0.05,
+      roughness: 0.92,
+      metalness: 0.02,
     });
 
     this.mesh = new THREE.Mesh(this.geometry, this.material);
     this.mesh.position.set(0, 0, -1.5);
-    this.mesh.receiveShadow = false;
+    this.mesh.receiveShadow = true;
     this.group.add(this.mesh);
   }
 
