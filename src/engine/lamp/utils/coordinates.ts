@@ -17,7 +17,7 @@ export class CoordinateUtils {
 
     // Responsive portrait adaptation
     if (aspect < 1.0) {
-      const minWorldWidth = 7.2;
+      const minWorldWidth = 8.5;
       if (worldWidth < minWorldWidth) {
         worldWidth = minWorldWidth;
         worldHeight = worldWidth / aspect;
