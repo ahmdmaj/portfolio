@@ -40,7 +40,7 @@ export class Stone {
     });
 
     this.mesh = new THREE.Mesh(this.geometry, this.material);
-    this.mesh.castShadow = false;
+    this.mesh.castShadow = true;
     this.group.add(this.mesh);
   }
 
