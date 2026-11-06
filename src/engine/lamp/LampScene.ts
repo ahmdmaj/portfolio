@@ -3,6 +3,10 @@ import { CONFIG } from "./config";
 import { LampStore } from "./state/LampStore";
 import { EngineCallbacks, LampState, LampStateListener, SceneDimensions } from "./types";
 import { CoordinateUtils } from "./utils/coordinates";
+import { Wall } from "./objects/Wall";
+import { Lamp } from "./objects/Lamp";
+import { Switch } from "./objects/Switch";
+import { Slingshot } from "./objects/Slingshot";
 
 export class LampScene {
   // Core Three.js instances
@@ -10,6 +14,17 @@ export class LampScene {
   private camera: THREE.OrthographicCamera;
   private renderer: THREE.WebGLRenderer | null = null;
   private container: HTMLElement | null = null;
+
+  // Scene Objects
+  public wall: Wall | null = null;
+  public lamp: Lamp | null = null;
+  public wallSwitch: Switch | null = null;
+  public slingshot: Slingshot | null = null;
+
+  // Scene Lights (Static environment illumination for Phase 2)
+  private ambientLight: THREE.AmbientLight | null = null;
+  private keyLight: THREE.DirectionalLight | null = null;
+  private fillLight: THREE.DirectionalLight | null = null;
 
   // Animation & Lifecycle
   private animationFrameId: number | null = null;
@@ -32,11 +47,6 @@ export class LampScene {
   public readonly store: LampStore;
   private callbacks: EngineCallbacks;
 
-  // Phase 1 Placeholder object to verify WebGL renderer and loop
-  private placeholderGroup: THREE.Group | null = null;
-  private placeholderMesh: THREE.Mesh | null = null;
-  private placeholderWireframe: THREE.LineSegments | null = null;
-
   constructor(callbacks: EngineCallbacks = {}) {
     this.store = new LampStore();
     this.callbacks = callbacks;
@@ -45,7 +55,7 @@ export class LampScene {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(CONFIG.colors.bg);
 
-    // Initialize Orthographic Camera (units will be sized upon mount & resize)
+    // Initialize Orthographic Camera (units will be updated upon mount & resize)
     this.camera = new THREE.OrthographicCamera(-5, 5, 5, -5, CONFIG.viewport.near, CONFIG.viewport.far);
     this.camera.position.set(0, 0, 10);
     this.camera.lookAt(0, 0, 0);
@@ -83,11 +93,11 @@ export class LampScene {
     canvas.setAttribute("touch-action", "none");
     this.container.appendChild(canvas);
 
-    // 2. Setup initial sizing & camera
-    this.handleResize();
+    // 2. Setup static 3D environment & physical objects (Phase 2)
+    this.setupEnvironment();
 
-    // 3. Create Phase 1 Verification Placeholder
-    this.setupPlaceholder();
+    // 3. Setup initial sizing, camera & object positions
+    this.handleResize();
 
     // 4. Setup ResizeObserver
     this.resizeObserver = new ResizeObserver(() => {
@@ -110,52 +120,42 @@ export class LampScene {
   }
 
   /**
-   * Creates an elegant placeholder object in Phase 1 to verify WebGL renderer and coordinate system
+   * Constructs the physical 3D environment: Wall, Lamp, Switch, Slingshot, and balanced lighting
    */
-  private setupPlaceholder(): void {
-    this.placeholderGroup = new THREE.Group();
+  private setupEnvironment(): void {
+    // 1. Balanced ambient and directional lighting for material definition
+    this.ambientLight = new THREE.AmbientLight(0xffffff, 0.55);
+    this.scene.add(this.ambientLight);
 
-    // Ambient light
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-    this.placeholderGroup.add(ambientLight);
+    // Key directional light creating soft specular glints on brushed metal and wood
+    this.keyLight = new THREE.DirectionalLight(0xffeedd, 0.95);
+    this.keyLight.position.set(-3.5, 6, 7);
+    this.scene.add(this.keyLight);
 
-    // Directional light
-    const dirLight = new THREE.DirectionalLight(CONFIG.colors.accent, 1.2);
-    dirLight.position.set(2, 4, 5);
-    this.placeholderGroup.add(dirLight);
+    // Soft warm fill light from lower right
+    this.fillLight = new THREE.DirectionalLight(CONFIG.colors.accent, 0.35);
+    this.fillLight.position.set(4, -2, 5);
+    this.scene.add(this.fillLight);
 
-    // Outer geometric cage (Icosahedron)
-    const geometry = new THREE.IcosahedronGeometry(0.85, 0);
-    const material = new THREE.MeshStandardMaterial({
-      color: CONFIG.colors.placeholder,
-      roughness: 0.35,
-      metalness: 0.6,
-      wireframe: false,
-      transparent: true,
-      opacity: 0.85,
-    });
-    this.placeholderMesh = new THREE.Mesh(geometry, material);
+    // 2. Wall background
+    this.wall = new Wall(30, 20);
+    this.scene.add(this.wall.group);
 
-    // Wireframe overlay for technical aesthetic
-    const wireframeGeom = new THREE.WireframeGeometry(geometry);
-    const wireframeMat = new THREE.LineBasicMaterial({
-      color: 0xffffff,
-      transparent: true,
-      opacity: 0.4,
-    });
-    this.placeholderWireframe = new THREE.LineSegments(wireframeGeom, wireframeMat);
-    this.placeholderMesh.add(this.placeholderWireframe);
+    // 3. Hanging Industrial Lamp (with socket and bulb)
+    this.lamp = new Lamp(CONFIG.lamp.cordLength);
+    this.scene.add(this.lamp.group);
 
-    // Position at top center lamp anchor
-    const anchors = CoordinateUtils.getAnchors(this.dimensions);
-    this.placeholderGroup.position.set(anchors.lamp.x, anchors.lamp.y - 1.2, 0);
-    this.placeholderGroup.add(this.placeholderMesh);
+    // 4. Wall Switch
+    this.wallSwitch = new Switch();
+    this.scene.add(this.wallSwitch.group);
 
-    this.scene.add(this.placeholderGroup);
+    // 5. Wooden Slingshot with Pebble
+    this.slingshot = new Slingshot();
+    this.scene.add(this.slingshot.group);
   }
 
   /**
-   * Handles resizing and re-aligns camera frustum and anchor positions
+   * Handles resizing and re-aligns camera frustum and normalized anchor positions
    */
   public handleResize(): void {
     if (!this.container || !this.renderer) return;
@@ -178,10 +178,26 @@ export class LampScene {
     this.camera.bottom = -halfH;
     this.camera.updateProjectionMatrix();
 
-    // Recompute anchor positions on resize
-    if (this.placeholderGroup) {
-      const anchors = CoordinateUtils.getAnchors(this.dimensions);
-      this.placeholderGroup.position.set(anchors.lamp.x, anchors.lamp.y - 1.2, 0);
+    // Re-size wall background
+    if (this.wall) {
+      this.wall.resize(this.dimensions.worldWidth, this.dimensions.worldHeight);
+    }
+
+    // Recompute anchor positions based on normalized coordinates
+    const anchors = CoordinateUtils.getAnchors(this.dimensions);
+    const scaleFactor = this.dimensions.isMobile ? 0.85 : 1.0;
+
+    if (this.lamp) {
+      this.lamp.setPosition(anchors.lamp.x, anchors.lamp.y);
+    }
+
+    if (this.wallSwitch) {
+      this.wallSwitch.setPosition(anchors.switch.x, anchors.switch.y);
+      this.wallSwitch.group.scale.setScalar(scaleFactor);
+    }
+
+    if (this.slingshot) {
+      this.slingshot.setPosition(anchors.slingshot.x, anchors.slingshot.y, scaleFactor);
     }
   }
 
@@ -213,14 +229,7 @@ export class LampScene {
     if (!this.isRunning) return;
 
     const now = performance.now();
-    const dt = Math.min((now - this.lastTime) / 1000, 0.1);
     this.lastTime = now;
-
-    // Animate Phase 1 placeholder to demonstrate active rendering
-    if (this.placeholderMesh) {
-      this.placeholderMesh.rotation.x += dt * 0.45;
-      this.placeholderMesh.rotation.y += dt * 0.7;
-    }
 
     if (this.renderer) {
       this.renderer.render(this.scene, this.camera);
@@ -266,22 +275,43 @@ export class LampScene {
       this.resizeObserver = null;
     }
 
-    // Traverse scene and dispose of geometries, materials, and textures
-    this.scene.traverse((obj) => {
-      if ((obj as THREE.Mesh).isMesh || (obj as THREE.LineSegments).isLineSegments) {
-        const mesh = obj as THREE.Mesh;
-        if (mesh.geometry) {
-          mesh.geometry.dispose();
-        }
-        if (mesh.material) {
-          if (Array.isArray(mesh.material)) {
-            mesh.material.forEach((mat) => mat.dispose());
-          } else {
-            mesh.material.dispose();
-          }
-        }
-      }
-    });
+    // Dispose physical objects
+    if (this.wall) {
+      this.wall.dispose();
+      this.wall = null;
+    }
+
+    if (this.lamp) {
+      this.lamp.dispose();
+      this.lamp = null;
+    }
+
+    if (this.wallSwitch) {
+      this.wallSwitch.dispose();
+      this.wallSwitch = null;
+    }
+
+    if (this.slingshot) {
+      this.slingshot.dispose();
+      this.slingshot = null;
+    }
+
+    // Clear lights
+    if (this.ambientLight) {
+      this.scene.remove(this.ambientLight);
+      this.ambientLight.dispose();
+      this.ambientLight = null;
+    }
+    if (this.keyLight) {
+      this.scene.remove(this.keyLight);
+      this.keyLight.dispose();
+      this.keyLight = null;
+    }
+    if (this.fillLight) {
+      this.scene.remove(this.fillLight);
+      this.fillLight.dispose();
+      this.fillLight = null;
+    }
 
     if (this.renderer) {
       this.renderer.dispose();
@@ -292,9 +322,5 @@ export class LampScene {
     }
 
     this.container = null;
-    this.placeholderGroup = null;
-    this.placeholderMesh = null;
-    this.placeholderWireframe = null;
   }
 }
-
