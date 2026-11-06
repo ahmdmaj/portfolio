@@ -68,6 +68,7 @@ export class Switch {
     this.materials.push(rockerMat);
 
     this.rockerMesh = new THREE.Mesh(rockerGeom, rockerMat);
+    this.rockerMesh.castShadow = true;
     // Pivot rocker slightly upward for default "ON" state
     this.rockerMesh.rotation.x = -CONFIG.wallSwitch.rockerAngleMax;
     this.rockerGroup.add(this.rockerMesh);
