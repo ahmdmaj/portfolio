@@ -187,3 +187,4 @@ export class Switch {
     this.group.clear();
   }
 }
+

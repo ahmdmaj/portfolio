@@ -142,3 +142,4 @@ export class Lamp {
     this.group.clear();
   }
 }
+

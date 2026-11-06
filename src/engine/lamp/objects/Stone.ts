@@ -62,3 +62,4 @@ export class Stone {
     this.group.clear();
   }
 }
+

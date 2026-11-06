@@ -38,3 +38,4 @@ export class Wall {
     this.group.clear();
   }
 }
+
