@@ -36,13 +36,13 @@ export class LampStore {
 
   private notify(): void {
     const readonlyState = Object.freeze({ ...this.state });
-    for (const listener of this.listeners) {
+    this.listeners.forEach((listener) => {
       try {
         listener(readonlyState);
       } catch (err) {
         console.error("Error in LampStore listener:", err);
       }
-    }
+    });
   }
 
   public setBulb(bulb: BulbState): void {
