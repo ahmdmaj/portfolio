@@ -14,7 +14,7 @@ export class Lamp {
   private geometries: THREE.BufferGeometry[] = [];
   private materials: THREE.Material[] = [];
 
-  constructor(cableLength = CONFIG.lamp.cordLength) {
+  constructor(cableLength = 2.2) {
     this.group = new THREE.Group();
     this.swingGroup = new THREE.Group();
     this.group.add(this.swingGroup);
@@ -100,9 +100,9 @@ export class Lamp {
     this.geometries.push(shadeGeom);
 
     const shadeMat = new THREE.MeshStandardMaterial({
-      color: 0x26272b, // Industrial brushed graphite metal
-      roughness: 0.38,
-      metalness: 0.85,
+      color: 0x32343a, // Industrial brushed graphite metal with subtle sheen
+      roughness: 0.32,
+      metalness: 0.88,
       side: THREE.DoubleSide,
     });
     this.materials.push(shadeMat);

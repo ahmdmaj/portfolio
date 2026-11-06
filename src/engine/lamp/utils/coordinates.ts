@@ -4,13 +4,25 @@ import { SceneDimensions } from "../types";
 
 export class CoordinateUtils {
   /**
-   * Computes scene dimensions and world extents based on viewport container size
+   * Computes scene dimensions and world extents based on viewport container size.
+   * On mobile portrait screens, maintains a minimum horizontal world width (7.2 units)
+   * so UI anchors (switch, slingshot) never clip against viewport edges.
    */
   public static calculateDimensions(width: number, height: number): SceneDimensions {
     const aspect = width > 0 && height > 0 ? width / height : 1;
-    const worldHeight = CONFIG.viewport.worldHeight;
-    const worldWidth = worldHeight * aspect;
     const isMobile = width < CONFIG.viewport.mobileBreakpoint || aspect < 1.0;
+
+    let worldHeight = CONFIG.viewport.worldHeight;
+    let worldWidth = worldHeight * aspect;
+
+    // Responsive portrait adaptation
+    if (aspect < 1.0) {
+      const minWorldWidth = 7.2;
+      if (worldWidth < minWorldWidth) {
+        worldWidth = minWorldWidth;
+        worldHeight = worldWidth / aspect;
+      }
+    }
 
     return {
       width,
@@ -98,4 +110,3 @@ export class CoordinateUtils {
     return { x: vec.x, y: vec.y };
   }
 }
-
