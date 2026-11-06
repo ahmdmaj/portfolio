@@ -38,6 +38,7 @@ export class Slingshot {
     this.geometries.push(handleGeom);
     this.handleMesh = new THREE.Mesh(handleGeom, woodMat);
     this.handleMesh.position.set(0, -0.32, 0);
+    this.handleMesh.castShadow = true;
     this.group.add(this.handleMesh);
 
     // Handle bottom rounded butt cap
@@ -57,6 +58,7 @@ export class Slingshot {
     const leftForkGeom = new THREE.TubeGeometry(leftCurve, 24, 0.065, 16, false);
     this.geometries.push(leftForkGeom);
     this.leftForkMesh = new THREE.Mesh(leftForkGeom, woodMat);
+    this.leftForkMesh.castShadow = true;
     this.group.add(this.leftForkMesh);
 
     // Right curved branch of the Y fork
@@ -69,6 +71,7 @@ export class Slingshot {
     const rightForkGeom = new THREE.TubeGeometry(rightCurve, 24, 0.065, 16, false);
     this.geometries.push(rightForkGeom);
     this.rightForkMesh = new THREE.Mesh(rightForkGeom, woodMat);
+    this.rightForkMesh.castShadow = true;
     this.group.add(this.rightForkMesh);
 
     // 2. Leather projectile pouch
@@ -82,6 +85,7 @@ export class Slingshot {
     this.materials.push(pouchMat);
     this.pouchMesh = new THREE.Mesh(pouchGeom, pouchMat);
     this.pouchMesh.position.copy(this.restPouchPos);
+    this.pouchMesh.castShadow = true;
     this.group.add(this.pouchMesh);
 
     // 3. Elastic rubber bands
