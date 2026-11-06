@@ -38,8 +38,8 @@ export const CONFIG = {
     },
     mobile: {
       lamp: { nx: 0, ny: 0.94 },       // Top center
-      switch: { nx: 0.58, ny: -0.22 },  // Lower right
-      slingshot: { nx: -0.58, ny: -0.68 }, // Bottom left
+      switch: { nx: 0.52, ny: -0.20 },  // Lower right
+      slingshot: { nx: -0.52, ny: -0.66 }, // Bottom left
     },
   },
 

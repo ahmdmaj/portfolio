@@ -96,7 +96,7 @@ export const LampExperience: React.FC = () => {
           <span className="text-accent">{COPY.headline.accentWord}</span>
         </h1>
 
-        <div className="mt-5 space-y-1 max-w-lg text-xs sm:text-sm text-muted/80 font-normal leading-relaxed">
+        <div className="mt-5 space-y-1 max-w-[280px] sm:max-w-lg mx-auto text-xs sm:text-sm text-muted/80 font-normal leading-relaxed">
           <p>{COPY.headline.subcopyLine1}</p>
           <p className="hidden sm:block text-muted/60">{COPY.headline.subcopyLine2}</p>
         </div>

@@ -23,7 +23,7 @@ export const LampHUD: React.FC<LampHUDProps> = ({ state, onToggleSound }) => {
   };
 
   return (
-    <header className="absolute inset-x-0 top-0 p-4 sm:p-6 md:p-8 flex justify-between items-start pointer-events-none z-20 font-mono text-xs select-none">
+    <header className="absolute inset-x-0 top-0 p-3.5 sm:p-6 md:p-8 flex justify-between items-start pointer-events-none z-20 font-mono text-xs select-none">
       {/* Top Left Navigation and Status HUD */}
       <div className="space-y-2 pointer-events-auto">
         <Link
