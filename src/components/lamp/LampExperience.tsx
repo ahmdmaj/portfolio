@@ -103,7 +103,7 @@ export const LampExperience: React.FC = () => {
       </div>
 
       {/* Bottom Monospace Interaction Instructions */}
-      <footer className="absolute inset-x-0 bottom-0 p-6 md:p-8 flex justify-center items-center pointer-events-none z-20 font-mono text-[11px] text-muted/60 text-center">
+      <footer className="absolute inset-x-0 bottom-0 p-4 sm:p-6 md:p-8 flex justify-center items-center pointer-events-none z-20 font-mono text-[11px] text-muted/60 text-center">
         <span className="px-3 py-1 rounded-full border border-muted/10 bg-bg/60 backdrop-blur-sm">
           <span className="hidden sm:inline">{COPY.hint.desktop}</span>
           <span className="sm:hidden">{COPY.hint.mobile}</span>
