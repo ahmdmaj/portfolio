@@ -20,7 +20,7 @@ export class LightingSystem {
   public fillLight: THREE.DirectionalLight;
 
   // Calibrated base intensities
-  private baseSpotIntensity = 22.0;
+  private baseSpotIntensity = 14.0;
   private baseBulbIntensity = 5.0;
   private baseAmbientIntensity = 0.25;
   private baseKeyIntensity = 0.55;
