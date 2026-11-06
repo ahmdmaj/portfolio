@@ -37,9 +37,9 @@ export const CONFIG = {
       slingshot: { nx: -0.72, ny: -0.68 }, // Bottom left
     },
     mobile: {
-      lamp: { nx: 0, ny: 0.92 },       // Top center
-      switch: { nx: 0.65, ny: -0.25 },  // Lower right
-      slingshot: { nx: -0.55, ny: -0.72 }, // Bottom left
+      lamp: { nx: 0, ny: 0.94 },       // Top center
+      switch: { nx: 0.58, ny: -0.22 },  // Lower right
+      slingshot: { nx: -0.58, ny: -0.68 }, // Bottom left
     },
   },
 
@@ -56,7 +56,7 @@ export const CONFIG = {
 
   // Lamp Pendulum specs
   lamp: {
-    cordLength: 3.2,
+    cordLength: 2.1,
     gravity: 9.81,
     damping: 0.65,
     shadeRadius: 0.85,
