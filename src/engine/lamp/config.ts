@@ -74,8 +74,13 @@ export const CONFIG = {
 
   // Slingshot specs
   slingshot: {
-    pullRadiusMax: 1.6,
-    power: 26.0,
+    pullRadiusMax: 1.4,
+    minPullDistance: 0.15,
+    power: 24.0,
+    snapDuration: 0.14,
+    restPouchPos: { x: 0, y: 0.22, z: 0.08 },
+    leftForkTip: { x: -0.36, y: 0.56, z: 0.06 },
+    rightForkTip: { x: 0.36, y: 0.56, z: 0.06 },
   },
 
   // Post-processing Bloom

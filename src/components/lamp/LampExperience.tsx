@@ -17,6 +17,7 @@ export const LampExperience: React.FC = () => {
     bulbs: 0,
     soundEnabled: true,
     isDragging: false,
+    drawPower: 0,
   });
 
   const [hasWebGL, setHasWebGL] = useState<boolean>(true);

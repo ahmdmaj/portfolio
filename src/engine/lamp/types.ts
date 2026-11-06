@@ -6,6 +6,7 @@ export interface LampState {
   bulbs: number;
   soundEnabled: boolean;
   isDragging: boolean;
+  drawPower: number; // 0.0 to 1.0 (normalized pull)
 }
 
 export type LampStateListener = (state: Readonly<LampState>) => void;

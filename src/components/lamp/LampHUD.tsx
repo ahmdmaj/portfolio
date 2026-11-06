@@ -76,7 +76,15 @@ export const LampHUD: React.FC<LampHUDProps> = ({ state, onToggleSound, onToggle
       </div>
 
       {/* Top Right Sound Toggle Pill */}
-      <div className="pointer-events-auto">
+      <div className="pointer-events-auto flex items-center gap-3">
+        {/* Slingshot Pull Power Meter (Shown only during active drag) */}
+        {state.isDragging && (
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-full border border-accent/30 bg-bg/60 backdrop-blur-sm text-[11px] text-accent font-semibold tracking-wider">
+            <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+            <span>PULL {Math.round(state.drawPower * 100)}%</span>
+          </div>
+        )}
+
         <button
           onClick={onToggleSound}
           type="button"

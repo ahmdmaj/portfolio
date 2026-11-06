@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import gsap from "gsap";
 import { CONFIG } from "../config";
 import { Stone } from "./Stone";
 
@@ -17,15 +18,29 @@ export class Slingshot {
   private geometries: THREE.BufferGeometry[] = [];
   private materials: THREE.Material[] = [];
 
-  // Anchor points for elastic bands
-  private leftForkTip = new THREE.Vector3(-0.36, 0.56, 0.06);
-  private rightForkTip = new THREE.Vector3(0.36, 0.56, 0.06);
-  private restPouchPos = new THREE.Vector3(0, 0.22, 0.08);
+  // Anchor points for elastic bands in local slingshot coordinates
+  public readonly leftForkTip = new THREE.Vector3(
+    CONFIG.slingshot.leftForkTip.x,
+    CONFIG.slingshot.leftForkTip.y,
+    CONFIG.slingshot.leftForkTip.z
+  );
+  public readonly rightForkTip = new THREE.Vector3(
+    CONFIG.slingshot.rightForkTip.x,
+    CONFIG.slingshot.rightForkTip.y,
+    CONFIG.slingshot.rightForkTip.z
+  );
+  public readonly restPouchPos = new THREE.Vector3(
+    CONFIG.slingshot.restPouchPos.x,
+    CONFIG.slingshot.restPouchPos.y,
+    CONFIG.slingshot.restPouchPos.z
+  );
+  public currentPouchPos: THREE.Vector3 = new THREE.Vector3();
 
   constructor() {
     this.group = new THREE.Group();
+    this.currentPouchPos.copy(this.restPouchPos);
 
-    // 1. Warm natural oiled wood material for the Y frame
+    // 1. Warm natural oiled walnut material for the Y frame
     const woodMat = new THREE.MeshStandardMaterial({
       color: CONFIG.colors.slingshotWood,
       roughness: 0.68,
@@ -120,8 +135,10 @@ export class Slingshot {
 
   /**
    * Updates the elastic bands and pouch orientation given the current pouch position
+   * Efficiently scales and re-orients existing meshes without reallocating geometries
    */
   public updateBands(pouchPos: THREE.Vector3): void {
+    this.currentPouchPos.copy(pouchPos);
     this.pouchMesh.position.copy(pouchPos);
     if (this.restingStone) {
       this.restingStone.setPosition(pouchPos.x, pouchPos.y, pouchPos.z + 0.04);
@@ -143,7 +160,10 @@ export class Slingshot {
     const mid = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
 
     band.position.copy(mid);
-    band.scale.set(1, Math.max(length, 0.01), 1);
+
+    // Thin slightly as elastic stretches
+    const thickness = Math.max(0.65, 1.0 - (length - 0.4) * 0.22);
+    band.scale.set(thickness, Math.max(length, 0.01), thickness);
 
     // Align cylinder (pointing up in Y by default) along direction vector
     const up = new THREE.Vector3(0, 1, 0);
@@ -152,6 +172,38 @@ export class Slingshot {
       dir.clone().normalize()
     );
     band.quaternion.copy(quaternion);
+  }
+
+  /**
+   * Snaps the pouch and stretched elastic bands back to their resting position
+   * Uses a high-frequency elastic bounce for realistic rubber band snap
+   */
+  public snapToRest(duration = 0.14, onComplete?: () => void): void {
+    gsap.killTweensOf(this.currentPouchPos);
+    gsap.to(this.currentPouchPos, {
+      x: this.restPouchPos.x,
+      y: this.restPouchPos.y,
+      z: this.restPouchPos.z,
+      duration,
+      ease: "elastic.out(1.25, 0.35)",
+      overwrite: "auto",
+      onUpdate: () => {
+        this.updateBands(this.currentPouchPos);
+      },
+      onComplete: () => {
+        this.updateBands(this.restPouchPos);
+        onComplete?.();
+      },
+    });
+  }
+
+  public setStoneVisible(visible: boolean): void {
+    this.restingStone.setVisible(visible);
+  }
+
+  public resetStone(): void {
+    this.updateBands(this.restPouchPos);
+    this.restingStone.setVisible(true);
   }
 
   public setPosition(x: number, y: number, scale = 1.0): void {
@@ -165,7 +217,16 @@ export class Slingshot {
     return pos;
   }
 
+  public getWorldForkCenter(): THREE.Vector3 {
+    const left = new THREE.Vector3();
+    const right = new THREE.Vector3();
+    this.leftForkMesh.getWorldPosition(left);
+    this.rightForkMesh.getWorldPosition(right);
+    return left.add(right).multiplyScalar(0.5);
+  }
+
   public dispose(): void {
+    gsap.killTweensOf(this.currentPouchPos);
     this.restingStone.dispose();
     this.geometries.forEach((g) => g.dispose());
     this.materials.forEach((m) => m.dispose());

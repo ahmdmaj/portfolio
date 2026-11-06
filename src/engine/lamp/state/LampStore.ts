@@ -7,6 +7,7 @@ export class LampStore {
     bulbs: 0,
     soundEnabled: true,
     isDragging: false,
+    drawPower: 0,
   };
 
   private listeners: Set<LampStateListener> = new Set();
@@ -105,9 +106,12 @@ export class LampStore {
     return nextSound;
   }
 
-  public setDragging(isDragging: boolean): void {
-    if (this.state.isDragging === isDragging) return;
-    this.state = { ...this.state, isDragging };
+  public setDragging(isDragging: boolean, drawPower = 0): void {
+    const roundedPower = isDragging ? Math.round(drawPower * 20) / 20 : 0;
+    if (this.state.isDragging === isDragging && Math.abs(this.state.drawPower - roundedPower) < 0.04) {
+      return;
+    }
+    this.state = { ...this.state, isDragging, drawPower: roundedPower };
     this.notify();
   }
 }
