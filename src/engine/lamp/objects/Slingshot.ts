@@ -27,7 +27,7 @@ export class Slingshot {
 
     // 1. Warm natural oiled wood material for the Y frame
     const woodMat = new THREE.MeshStandardMaterial({
-      color: 0x7c4e26, // Natural rich walnut wood
+      color: CONFIG.colors.slingshotWood,
       roughness: 0.68,
       metalness: 0.06,
     });
@@ -86,7 +86,7 @@ export class Slingshot {
 
     // 3. Elastic rubber bands
     const bandMat = new THREE.MeshStandardMaterial({
-      color: 0xc87d32, // Amber/tan surgical latex band
+      color: CONFIG.colors.elasticBand,
       roughness: 0.58,
       metalness: 0.15,
     });
