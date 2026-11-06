@@ -124,18 +124,23 @@ export class LampScene {
    */
   private setupEnvironment(): void {
     // 1. Balanced ambient and directional lighting for material definition
-    this.ambientLight = new THREE.AmbientLight(0xffffff, 0.55);
+    this.ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
     this.scene.add(this.ambientLight);
 
     // Key directional light creating soft specular glints on brushed metal and wood
-    this.keyLight = new THREE.DirectionalLight(0xffeedd, 0.95);
+    this.keyLight = new THREE.DirectionalLight(0xffeedd, 1.15);
     this.keyLight.position.set(-3.5, 6, 7);
     this.scene.add(this.keyLight);
 
     // Soft warm fill light from lower right
-    this.fillLight = new THREE.DirectionalLight(CONFIG.colors.accent, 0.35);
+    this.fillLight = new THREE.DirectionalLight(CONFIG.colors.accent, 0.45);
     this.fillLight.position.set(4, -2, 5);
     this.scene.add(this.fillLight);
+
+    // Top rim light to sculpt the metallic lamp shade silhouette
+    const rimLight = new THREE.DirectionalLight(0xffffff, 0.85);
+    rimLight.position.set(0, 7, 1);
+    this.scene.add(rimLight);
 
     // 2. Wall background
     this.wall = new Wall(30, 20);
@@ -167,10 +172,9 @@ export class LampScene {
     this.dimensions = CoordinateUtils.calculateDimensions(width, height);
     this.renderer.setSize(width, height, false);
 
-    // Update orthographic camera frustum:
-    // Fixed worldHeight = 10 units
+    // Update orthographic camera frustum
     const halfH = this.dimensions.worldHeight / 2;
-    const halfW = (this.dimensions.worldHeight * this.dimensions.aspect) / 2;
+    const halfW = this.dimensions.worldWidth / 2;
 
     this.camera.left = -halfW;
     this.camera.right = halfW;

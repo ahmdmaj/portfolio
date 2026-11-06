@@ -46,7 +46,7 @@ export class Bulb {
     const bulbMat = new THREE.MeshStandardMaterial({
       color: 0xffeed1,
       emissive: CONFIG.colors.bulbWarm,
-      emissiveIntensity: 0.85,
+      emissiveIntensity: 1.35,
       roughness: 0.18,
       metalness: 0.08,
       transparent: true,
