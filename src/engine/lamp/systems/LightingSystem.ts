@@ -10,19 +10,22 @@ export class LightingSystem {
   private scene: THREE.Scene;
   private lampSocketGroup: THREE.Group;
 
-  // Lights
+  // Primary Lights
+  public spotLight: THREE.SpotLight;
+  public spotTarget: THREE.Object3D;
   public bulbLight: THREE.PointLight;
   public ambientLight: THREE.AmbientLight;
   public keyLight: THREE.DirectionalLight;
   public rimLight: THREE.DirectionalLight;
   public fillLight: THREE.DirectionalLight;
 
-  // Base intensities for tuning and state changes
-  private baseBulbIntensity = 18.0;
-  private baseAmbientIntensity = 0.28;
+  // Calibrated base intensities
+  private baseSpotIntensity = 22.0;
+  private baseBulbIntensity = 5.0;
+  private baseAmbientIntensity = 0.25;
   private baseKeyIntensity = 0.55;
-  private baseRimIntensity = 0.65;
-  private baseFillIntensity = 0.22;
+  private baseRimIntensity = 0.45;
+  private baseFillIntensity = 0.20;
 
   private currentIntensityFactor = 1.0;
 
@@ -30,43 +33,60 @@ export class LightingSystem {
     this.scene = options.scene;
     this.lampSocketGroup = options.lampSocketGroup;
 
-    // 1. Primary bulb PointLight (mounted directly at the bulb center inside the lamp socket group)
-    // Warm incandescent amber/gold with physically correct quadratic decay (decay = 2)
+    // 1. Primary Downward SpotLight: Creates the photorealistic, smooth warm light cone on the wall
+    // Attached directly to lampSocketGroup so it naturally sways when the lamp swings
+    this.spotLight = new THREE.SpotLight(
+      CONFIG.colors.bulbWarm,
+      this.baseSpotIntensity,
+      22.0,                  // Maximum throw distance
+      Math.PI / 3.4,         // Beam angle (~53 degrees, perfect editorial cone)
+      0.82,                  // Ultra-soft feathered penumbra (zero hard cutoff boundaries)
+      2.0                    // Physically correct quadratic falloff
+    );
+    this.spotLight.position.set(0, -0.65, 0.15);
+    this.spotLight.castShadow = true;
+    this.spotLight.shadow.mapSize.width = 1024;
+    this.spotLight.shadow.mapSize.height = 1024;
+    this.spotLight.shadow.camera.near = 0.2;
+    this.spotLight.shadow.camera.far = 25.0;
+    this.spotLight.shadow.bias = -0.001;
+
+    // SpotLight target anchored straight down towards the wall plane
+    this.spotTarget = new THREE.Object3D();
+    this.spotTarget.position.set(0, -9.0, -1.0);
+    this.lampSocketGroup.add(this.spotTarget);
+    this.spotLight.target = this.spotTarget;
+    this.lampSocketGroup.add(this.spotLight);
+
+    // 2. Local Bulb Glow PointLight: Provides soft 360-degree local warmth to the bulb envelope & socket
     this.bulbLight = new THREE.PointLight(
       CONFIG.colors.bulbWarm,
       this.baseBulbIntensity,
-      16.0,
+      4.5,
       2.0
     );
-    // Positioned slightly below the socket collar at the bulb's center
-    this.bulbLight.position.set(0, -0.68, 0.12);
-    this.bulbLight.castShadow = true;
-
-    // Optimize shadow map settings
-    this.bulbLight.shadow.mapSize.width = 1024;
-    this.bulbLight.shadow.mapSize.height = 1024;
-    this.bulbLight.shadow.camera.near = 0.1;
-    this.bulbLight.shadow.camera.far = 20.0;
-    this.bulbLight.shadow.bias = -0.001;
-    this.bulbLight.shadow.normalBias = 0.02;
-
+    this.bulbLight.position.set(0, -0.62, 0.12);
+    this.bulbLight.castShadow = false;
     this.lampSocketGroup.add(this.bulbLight);
 
-    // 2. Subtle ambient fill (keeps shadowed areas dark without total black pitch)
-    this.ambientLight = new THREE.AmbientLight(0x0e1017, this.baseAmbientIntensity);
+    // 3. Subtle ambient fill (keeps shadowed areas dark without pitch black)
+    this.ambientLight = new THREE.AmbientLight(0x0a0c12, this.baseAmbientIntensity);
     this.scene.add(this.ambientLight);
 
-    // 3. Directional Key Light from top-left (creates soft specular highlights on metallic shade and wood)
+    // 4. Directional Key Light from top-left (creates soft specular highlights on metallic shade and wood)
     this.keyLight = new THREE.DirectionalLight(0xffeedd, this.baseKeyIntensity);
-    this.keyLight.position.set(-4.0, 5.5, 6.0);
+    this.keyLight.position.set(-4.0, 5.5, 5.0);
+    this.keyLight.castShadow = true;
+    this.keyLight.shadow.mapSize.width = 1024;
+    this.keyLight.shadow.mapSize.height = 1024;
     this.scene.add(this.keyLight);
 
-    // 4. Directional Rim Light from behind/top (sculpts the industrial metal shade edge)
+    // 5. Directional Rim Light placed BEHIND the lamp (sculpts the industrial metal shade edge without washing out the front)
     this.rimLight = new THREE.DirectionalLight(0xffffff, this.baseRimIntensity);
-    this.rimLight.position.set(0, 6.5, 1.2);
+    this.rimLight.position.set(0, 7.5, -2.5);
     this.scene.add(this.rimLight);
 
-    // 5. Soft warm bounce fill from lower right
+    // 6. Soft warm bounce fill from lower right
     this.fillLight = new THREE.DirectionalLight(CONFIG.colors.accent, this.baseFillIntensity);
     this.fillLight.position.set(3.5, -1.8, 4.5);
     this.scene.add(this.fillLight);
@@ -77,6 +97,7 @@ export class LightingSystem {
    */
   public setIntensity(factor: number): void {
     this.currentIntensityFactor = Math.max(0, Math.min(1.5, factor));
+    this.spotLight.intensity = this.baseSpotIntensity * this.currentIntensityFactor;
     this.bulbLight.intensity = this.baseBulbIntensity * this.currentIntensityFactor;
     // Ambient and key light slightly adjust to simulate real optical pupil response
     this.ambientLight.intensity = this.baseAmbientIntensity * (0.6 + 0.4 * this.currentIntensityFactor);
@@ -89,6 +110,10 @@ export class LightingSystem {
   }
 
   public dispose(): void {
+    this.lampSocketGroup.remove(this.spotLight);
+    this.lampSocketGroup.remove(this.spotTarget);
+    this.spotLight.dispose();
+
     this.lampSocketGroup.remove(this.bulbLight);
     this.bulbLight.dispose();
 

@@ -24,39 +24,36 @@ export class EffectsSystem {
   constructor(options: EffectsOptions) {
     this.lampSocketGroup = options.lampSocketGroup;
 
-    // 1. Subtle Volumetric Light Cone beneath the lamp
-    // Height 8.5 units spanning from the lamp shade down toward the floor
-    const coneHeight = 8.5;
-    const radiusTop = 0.45;
-    const radiusBottom = 4.0;
+    // 1. Subtle, translucent volumetric light cone with soft feathered falloff
+    const coneHeight = 9.2;
+    const radiusTop = 0.40;
+    const radiusBottom = 5.6;
     this.lightConeGeometry = new THREE.CylinderGeometry(
       radiusTop,
       radiusBottom,
       coneHeight,
-      36,
-      1,
+      48,
+      24,
       true
     );
-    // Translate geometry so top rim aligns with y = 0
+    // Align apex directly under the shade rim
     this.lightConeGeometry.translate(0, -coneHeight / 2, 0);
 
     this.lightConeMaterial = new THREE.ShaderMaterial({
       uniforms: {
-        uColor: { value: new THREE.Color(CONFIG.colors.bulbWarm) },
+        uColor: { value: new THREE.Color(0xffcca0) }, // Warm incandescent beam color
         uIntensity: { value: 1.0 },
         uHeight: { value: coneHeight },
       },
       vertexShader: `
-        varying vec2 vUv;
         varying vec3 vNormal;
-        varying vec3 vPosition;
+        varying vec3 vLocalPosition;
         varying vec3 vViewPosition;
 
         void main() {
-          vUv = uv;
           vNormal = normalize(normalMatrix * normal);
+          vLocalPosition = position;
           vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-          vPosition = position;
           vViewPosition = -mvPosition.xyz;
           gl_Position = projectionMatrix * mvPosition;
         }
@@ -66,25 +63,25 @@ export class EffectsSystem {
         uniform float uIntensity;
         uniform float uHeight;
 
-        varying vec2 vUv;
         varying vec3 vNormal;
-        varying vec3 vPosition;
+        varying vec3 vLocalPosition;
         varying vec3 vViewPosition;
 
         void main() {
-          // Vertical smooth falloff from lamp down to base
-          float distY = clamp(-vPosition.y / uHeight, 0.0, 1.0);
-          float verticalFade = smoothstep(1.0, 0.02, distY);
+          // Normalized vertical coordinate [0 at apex, 1 at bottom]
+          float normY = clamp(-vLocalPosition.y / uHeight, 0.0, 1.0);
+          float topFade = smoothstep(0.0, 0.08, normY);
+          float bottomFade = smoothstep(1.0, 0.25, normY);
+          float verticalFade = topFade * bottomFade;
 
-          // Soft translucent edge falloff (Fresnel-like soften on silhouette)
+          // View glancing softness to avoid silhouette creases
           vec3 viewDir = normalize(vViewPosition);
-          float edge = abs(dot(vNormal, viewDir));
-          float edgeFade = smoothstep(0.0, 0.5, edge);
+          float viewSoftness = pow(abs(dot(vNormal, viewDir)), 0.75);
 
-          // Combined subtle haze transparency (non-intrusive)
-          float alpha = verticalFade * edgeFade * 0.16 * uIntensity;
+          // Ethereal atmospheric density
+          float alpha = verticalFade * viewSoftness * 0.025 * uIntensity;
 
-          gl_FragColor = vec4(uColor, alpha);
+          gl_FragColor = vec4(uColor * alpha, alpha);
         }
       `,
       blending: THREE.AdditiveBlending,
@@ -94,12 +91,11 @@ export class EffectsSystem {
     });
 
     this.lightConeMesh = new THREE.Mesh(this.lightConeGeometry, this.lightConeMaterial);
-    // Positioned right at the base of the shade rim
     this.lightConeMesh.position.set(0, -0.66, 0);
     this.lampSocketGroup.add(this.lightConeMesh);
 
     // 2. Warm Optical Glow Halo around the incandescent bulb
-    this.glowGeometry = new THREE.SphereGeometry(0.55, 24, 24);
+    this.glowGeometry = new THREE.SphereGeometry(0.48, 24, 24);
     this.glowMaterial = new THREE.ShaderMaterial({
       uniforms: {
         uColor: { value: new THREE.Color(CONFIG.colors.bulbWarm) },
@@ -124,9 +120,9 @@ export class EffectsSystem {
 
         void main() {
           vec3 viewDir = normalize(vViewPosition);
-          float glow = pow(max(0.0, dot(vNormal, viewDir)), 2.5);
-          float alpha = glow * 0.45 * uIntensity;
-          gl_FragColor = vec4(uColor, alpha);
+          float glow = pow(max(0.0, dot(vNormal, viewDir)), 2.8);
+          float alpha = glow * 0.22 * uIntensity;
+          gl_FragColor = vec4(uColor * alpha, alpha);
         }
       `,
       blending: THREE.AdditiveBlending,
@@ -136,7 +132,7 @@ export class EffectsSystem {
     });
 
     this.glowMesh = new THREE.Mesh(this.glowGeometry, this.glowMaterial);
-    this.glowMesh.position.set(0, -0.58, 0);
+    this.glowMesh.position.set(0, -0.62, 0);
     this.lampSocketGroup.add(this.glowMesh);
   }
 
@@ -160,7 +156,6 @@ export class EffectsSystem {
   ): void {
     if (typeof document === "undefined" || containerWidth <= 0) return;
 
-    // Project lamp world position to 2D screen coordinate
     const projected = lampWorldPos.clone().project(camera);
     const screenPercentX = ((projected.x + 1) / 2) * 100;
 

@@ -109,7 +109,7 @@ export class Lamp {
 
     this.shadeMesh = new THREE.Mesh(shadeGeom, shadeMat);
     this.shadeMesh.position.set(0, -0.16, 0);
-    this.shadeMesh.castShadow = true;
+    this.shadeMesh.castShadow = false; // Disable direct shadow casting so it doesn't create harsh hyperbolic cuts across the wall
     this.shadeMesh.receiveShadow = false;
     this.socketGroup.add(this.shadeMesh);
 
