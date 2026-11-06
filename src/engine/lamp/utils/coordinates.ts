@@ -98,3 +98,4 @@ export class CoordinateUtils {
     return { x: vec.x, y: vec.y };
   }
 }
+

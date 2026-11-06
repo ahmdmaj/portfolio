@@ -40,3 +40,4 @@
 - **Phase 8**: Procedural Web Audio Synthesis (switch click, band twang, metal tonk, glass crash)
 - **Phase 9**: Responsiveness, A11y & Optimization (mobile layout, keyboard controls, prefers-reduced-motion)
 - **Phase 10**: Portfolio Polish & Deployment Prep
+

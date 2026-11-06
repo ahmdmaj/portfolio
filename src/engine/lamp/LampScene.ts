@@ -297,3 +297,4 @@ export class LampScene {
     this.placeholderWireframe = null;
   }
 }
+

@@ -41,3 +41,4 @@ export const metadata: Metadata = {
 export default function LampPage() {
   return <LampExperience />;
 }
+

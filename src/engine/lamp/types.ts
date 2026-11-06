@@ -32,3 +32,4 @@ export interface EngineCallbacks {
   onBulbReplaced?: () => void;
   onSoundTrigger?: (sound: "switch" | "twang" | "tonk" | "shatter") => void;
 }
+

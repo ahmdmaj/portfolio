@@ -76,3 +76,4 @@ export const LampHUD: React.FC<LampHUDProps> = ({ state, onToggleSound }) => {
     </header>
   );
 };
+

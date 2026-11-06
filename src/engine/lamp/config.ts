@@ -77,3 +77,4 @@ export const CONFIG = {
 } as const;
 
 export type LampConfig = typeof CONFIG;
+
