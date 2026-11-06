@@ -50,17 +50,29 @@ export const CONFIG = {
     gravity: -18.0,
     airDrag: 0.998,
     maxLiveStones: 5,
-    maxBounces: 2,
-    bounceRestitution: 0.55,
+    maxBounces: 3,
+    bounceRestitution: 0.52,
+    stoneRadius: 0.13,
+    stoneMass: 0.18,
+    lampMass: 1.5,
+    lampPivotLength: 2.35,
+    lampDamping: 0.82,
+    lampRestitution: 0.45,
+    switchThresholdSpeed: 4.5,
+    floorRestitution: 0.52,
+    wallRestitution: 0.42,
+    friction: 0.82,
+    settleVelocityThreshold: 0.65,
+    settleDuration: 1.2, // seconds to rest on floor before respawn
   },
 
   // Lamp Pendulum specs
   lamp: {
     cordLength: 2.1,
     gravity: 9.81,
-    damping: 0.65,
-    shadeRadius: 0.85,
-    shadeHeight: 0.7,
+    damping: 0.78,
+    shadeRadius: 0.88,
+    shadeHeight: 0.72,
     bulbRadius: 0.28,
   },
 
@@ -81,6 +93,19 @@ export const CONFIG = {
     restPouchPos: { x: 0, y: 0.22, z: 0.08 },
     leftForkTip: { x: -0.36, y: 0.56, z: 0.06 },
     rightForkTip: { x: 0.36, y: 0.56, z: 0.06 },
+  },
+
+  // Glass Shards & Shatter specs (Phase 7)
+  shards: {
+    count: 32,
+    gravity: -18.0,
+    explosionMinSpeed: 3.5,
+    explosionMaxSpeed: 8.0,
+    stoneMomentumFactor: 0.35,
+    floorRestitution: 0.38,
+    friction: 0.68,
+    sparkDuration: 0.09,
+    settleDuration: 2.8,
   },
 
   // Post-processing Bloom

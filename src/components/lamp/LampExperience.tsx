@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { LampScene } from "@/engine/lamp/LampScene";
 import { COPY } from "@/engine/lamp/copy";
-import { LampState } from "@/engine/lamp/types";
+import { LampState, SocketScreenPosition } from "@/engine/lamp/types";
 import { LampHUD } from "./LampHUD";
 import { LampFallback } from "./LampFallback";
 
@@ -13,6 +13,7 @@ export const LampExperience: React.FC = () => {
 
   const [lampState, setLampState] = useState<LampState>({
     bulb: "on",
+    switchOn: true,
     shots: 0,
     bulbs: 0,
     soundEnabled: true,
@@ -20,7 +21,30 @@ export const LampExperience: React.FC = () => {
     drawPower: 0,
   });
 
+  const [socketPos, setSocketPos] = useState<SocketScreenPosition | null>(null);
+  const [isReplacing, setIsReplacing] = useState<boolean>(false);
   const [hasWebGL, setHasWebGL] = useState<boolean>(true);
+
+  const handleToggleSound = useCallback(() => {
+    if (engineRef.current) {
+      engineRef.current.store.toggleSound();
+    }
+  }, []);
+
+  const handleTogglePower = useCallback(() => {
+    if (engineRef.current) {
+      engineRef.current.store.toggleSwitch();
+    }
+  }, []);
+
+  const handleReplaceBulb = useCallback(() => {
+    if (engineRef.current && !isReplacing) {
+      setIsReplacing(true);
+      engineRef.current.replaceBulb(() => {
+        setIsReplacing(false);
+      });
+    }
+  }, [isReplacing]);
 
   useEffect(() => {
     // 1. Verify WebGL support
@@ -48,6 +72,9 @@ export const LampExperience: React.FC = () => {
       onStateChange: (newState) => {
         setLampState(newState);
       },
+      onSocketPositionChange: (pos) => {
+        setSocketPos(pos);
+      },
     });
 
     engine.mount(containerRef.current);
@@ -59,26 +86,30 @@ export const LampExperience: React.FC = () => {
       (window as unknown as Record<string, unknown>).__lampStore = engine.store;
     }
 
-    // 3. Cleanup on unmount
+    // 3. Global keyboard accessibility (R = Replace bulb, S = Flip switch)
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+      if (e.code === "KeyR" && engine.store.getState().bulb === "broken") {
+        e.preventDefault();
+        handleReplaceBulb();
+      } else if (e.code === "KeyS") {
+        e.preventDefault();
+        handleTogglePower();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+
+    // 4. Cleanup on unmount
     return () => {
+      window.removeEventListener("keydown", handleKeyDown);
       if (engineRef.current) {
         engineRef.current.dispose();
         engineRef.current = null;
       }
     };
-  }, []);
-
-  const handleToggleSound = () => {
-    if (engineRef.current) {
-      engineRef.current.store.toggleSound();
-    }
-  };
-
-  const handleTogglePower = () => {
-    if (engineRef.current) {
-      engineRef.current.store.toggleSwitch();
-    }
-  };
+  }, [handleReplaceBulb, handleTogglePower]);
 
   if (!hasWebGL) {
     return <LampFallback />;
@@ -98,6 +129,31 @@ export const LampExperience: React.FC = () => {
         onToggleSound={handleToggleSound}
         onTogglePower={handleTogglePower}
       />
+
+      {/* Accessible DOM Button for Bulb Replacement (projected to 3D socket position) */}
+      {lampState.bulb === "broken" && !isReplacing && (
+        <div
+          style={{
+            left: socketPos ? `${socketPos.x}px` : "50%",
+            top: socketPos ? `${socketPos.y + 42}px` : "34vh",
+            transform: "translate(-50%, 0)",
+          }}
+          className="absolute z-30 pointer-events-auto transition-transform duration-75 ease-out animate-in fade-in zoom-in-95"
+        >
+          <button
+            type="button"
+            onClick={handleReplaceBulb}
+            aria-label={COPY.actions.replaceBulb}
+            className="flex items-center gap-2 px-4 py-2 rounded-full border border-accent/40 bg-bg/90 backdrop-blur-md text-xs font-mono text-accent hover:text-text hover:border-accent hover:bg-accent/15 transition-all shadow-[0_0_25px_rgba(224,184,122,0.25)] cursor-pointer group active:scale-95"
+          >
+            <span className="w-2 h-2 rounded-full bg-accent group-hover:scale-125 transition-transform animate-pulse" />
+            <span className="font-medium tracking-wide">{COPY.actions.replaceBulb}</span>
+            <span className="text-[10px] text-muted/70 bg-muted/10 px-1.5 py-0.5 rounded border border-muted/20 group-hover:text-text transition-colors">
+              [R]
+            </span>
+          </button>
+        </div>
+      )}
 
       {/* Upper-Center Small Monospace Time Label under Lamp */}
       <div className="absolute left-1/2 -translate-x-1/2 top-[30vh] sm:top-[32vh] pointer-events-none z-20">

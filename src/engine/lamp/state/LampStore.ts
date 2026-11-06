@@ -3,6 +3,7 @@ import { BulbState, LampState, LampStateListener } from "../types";
 export class LampStore {
   private state: LampState = {
     bulb: "on",
+    switchOn: true,
     shots: 0,
     bulbs: 0,
     soundEnabled: true,
@@ -22,8 +23,15 @@ export class LampStore {
       try {
         const params = new URLSearchParams(window.location.search);
         const urlBulb = params.get("bulb");
-        if (urlBulb === "off" || urlBulb === "on") {
-          this.state.bulb = urlBulb;
+        if (urlBulb === "off") {
+          this.state.bulb = "off";
+          this.state.switchOn = false;
+        } else if (urlBulb === "broken" || params.get("replace") === "ready" || params.get("shatter") === "test") {
+          this.state.bulb = "broken";
+          this.state.bulbs = 1;
+        } else if (urlBulb === "on") {
+          this.state.bulb = "on";
+          this.state.switchOn = true;
         }
       } catch {
         // Fallback for environments without location search
@@ -62,12 +70,15 @@ export class LampStore {
   }
 
   public toggleSwitch(): BulbState {
+    const nextSwitchOn = !this.state.switchOn;
     if (this.state.bulb === "broken") {
-      // While broken, flipping the switch does not fix the bulb
+      // While broken, flipping the switch flips the rocker but gives no light
+      this.state = { ...this.state, switchOn: nextSwitchOn };
+      this.notify();
       return "broken";
     }
-    const nextBulb: BulbState = this.state.bulb === "on" ? "off" : "on";
-    this.state = { ...this.state, bulb: nextBulb };
+    const nextBulb: BulbState = nextSwitchOn ? "on" : "off";
+    this.state = { ...this.state, switchOn: nextSwitchOn, bulb: nextBulb };
     this.notify();
     return nextBulb;
   }
@@ -87,8 +98,9 @@ export class LampStore {
   }
 
   public replaceBulb(): void {
-    // Restores bulb to "on"
-    this.state = { ...this.state, bulb: "on" };
+    // Restores bulb according to current switch state
+    const nextBulb: BulbState = this.state.switchOn ? "on" : "off";
+    this.state = { ...this.state, bulb: nextBulb };
     this.notify();
   }
 

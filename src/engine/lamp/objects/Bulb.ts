@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import gsap from "gsap";
 import { CONFIG } from "../config";
 
 export class Bulb {
@@ -6,8 +7,15 @@ export class Bulb {
   public readonly bulbMesh: THREE.Mesh;
   private readonly socketBaseMesh: THREE.Mesh;
   private readonly filamentMesh: THREE.LineSegments;
+  private readonly brokenNeckMesh: THREE.Mesh;
+  private readonly brokenFilamentMesh: THREE.LineSegments;
+
   private bulbMat: THREE.MeshStandardMaterial;
   private filamentMat: THREE.LineBasicMaterial;
+  private brokenStemMat: THREE.LineBasicMaterial;
+
+  public isBroken: boolean = false;
+  private isAnimating: boolean = false;
 
   private geometries: THREE.BufferGeometry[] = [];
   private materials: THREE.Material[] = [];
@@ -80,6 +88,39 @@ export class Bulb {
 
     this.filamentMesh = new THREE.LineSegments(filamentGeom, this.filamentMat);
     this.group.add(this.filamentMesh);
+
+    // 4. Jagged broken glass collar remnant (visible when broken)
+    const jaggedNeckPoints: THREE.Vector2[] = [
+      new THREE.Vector2(0.11, 0.0),
+      new THREE.Vector2(0.12, -0.05),
+      new THREE.Vector2(0.14, -0.09),
+      new THREE.Vector2(0.09, -0.07),
+    ];
+    const jaggedNeckGeom = new THREE.LatheGeometry(jaggedNeckPoints, 16);
+    this.geometries.push(jaggedNeckGeom);
+    this.brokenNeckMesh = new THREE.Mesh(jaggedNeckGeom, this.bulbMat);
+    this.brokenNeckMesh.visible = false;
+    this.group.add(this.brokenNeckMesh);
+
+    // 5. Snapped lead wire stems inside socket (visible when broken)
+    const brokenStemPoints = [
+      new THREE.Vector3(-0.04, 0.0, 0),
+      new THREE.Vector3(-0.03, -0.12, 0.01),
+      new THREE.Vector3(0.04, 0.0, 0),
+      new THREE.Vector3(0.02, -0.09, -0.01),
+    ];
+    const brokenStemGeom = new THREE.BufferGeometry().setFromPoints(brokenStemPoints);
+    this.geometries.push(brokenStemGeom);
+    this.brokenStemMat = new THREE.LineBasicMaterial({
+      color: 0x5a5d65,
+      transparent: true,
+      opacity: 0.85,
+      linewidth: 1,
+    });
+    this.materials.push(this.brokenStemMat);
+    this.brokenFilamentMesh = new THREE.LineSegments(brokenStemGeom, this.brokenStemMat);
+    this.brokenFilamentMesh.visible = false;
+    this.group.add(this.brokenFilamentMesh);
   }
 
   /**
@@ -92,6 +133,79 @@ export class Bulb {
     this.filamentMat.opacity = 0.12 + 0.58 * clamped;
   }
 
+  /**
+   * Toggles broken state visibility
+   */
+  public setBroken(broken: boolean): void {
+    this.isBroken = broken;
+    if (broken) {
+      this.bulbMesh.visible = false;
+      this.filamentMesh.visible = false;
+      this.brokenNeckMesh.visible = true;
+      this.brokenFilamentMesh.visible = true;
+      this.setIlluminated(0);
+    } else {
+      this.bulbMesh.visible = true;
+      this.filamentMesh.visible = true;
+      this.bulbMesh.position.set(0, 0, 0);
+      this.bulbMesh.rotation.set(0, 0, 0);
+      this.filamentMesh.position.set(0, 0, 0);
+      this.filamentMesh.rotation.set(0, 0, 0);
+      this.brokenNeckMesh.visible = false;
+      this.brokenFilamentMesh.visible = false;
+    }
+  }
+
+  /**
+   * Animates replacement bulb dropping in and screwing into the socket
+   */
+  public animateReplacement(onComplete: () => void): void {
+    if (this.isAnimating) return;
+    this.isAnimating = true;
+
+    // Hide broken remnants
+    this.brokenNeckMesh.visible = false;
+    this.brokenFilamentMesh.visible = false;
+
+    // Show fresh bulb in displaced position (dropped down slightly, rotated)
+    this.bulbMesh.visible = true;
+    this.filamentMesh.visible = true;
+    this.bulbMesh.position.set(0, -0.32, 0);
+    this.bulbMesh.rotation.set(0, -Math.PI * 4, 0);
+    this.filamentMesh.position.set(0, -0.32, 0);
+    this.filamentMesh.rotation.set(0, -Math.PI * 4, 0);
+    this.setIlluminated(0);
+
+    const tl = gsap.timeline({
+      onComplete: () => {
+        this.isBroken = false;
+        this.isAnimating = false;
+        onComplete();
+      },
+    });
+
+    // Screw-in movement: translates up into socket while rotating clockwise
+    tl.to(
+      [this.bulbMesh.position, this.filamentMesh.position],
+      {
+        y: 0,
+        duration: 0.82,
+        ease: "power2.out",
+      },
+      0
+    );
+
+    tl.to(
+      [this.bulbMesh.rotation, this.filamentMesh.rotation],
+      {
+        y: 0,
+        duration: 0.82,
+        ease: "power2.out",
+      },
+      0
+    );
+  }
+
   public getBulbWorldCenter(): THREE.Vector3 {
     const target = new THREE.Vector3();
     this.bulbMesh.getWorldPosition(target);
@@ -100,6 +214,10 @@ export class Bulb {
   }
 
   public dispose(): void {
+    gsap.killTweensOf(this.bulbMesh.position);
+    gsap.killTweensOf(this.bulbMesh.rotation);
+    gsap.killTweensOf(this.filamentMesh.position);
+    gsap.killTweensOf(this.filamentMesh.rotation);
     this.geometries.forEach((g) => g.dispose());
     this.materials.forEach((m) => m.dispose());
     this.geometries = [];

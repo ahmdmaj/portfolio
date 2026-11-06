@@ -38,10 +38,9 @@ export const LampHUD: React.FC<LampHUDProps> = ({ state, onToggleSound, onToggle
           <button
             type="button"
             onClick={onTogglePower}
-            disabled={state.bulb === "broken"}
             title="Click to toggle switch (or click 3D wall switch on the right)"
             aria-label={`Toggle wall switch. Current state: ${state.bulb}`}
-            className="flex items-center gap-1.5 hover:opacity-80 transition-opacity focus:outline-none cursor-pointer disabled:cursor-not-allowed group text-left"
+            className="flex items-center gap-1.5 hover:opacity-80 transition-opacity focus:outline-none cursor-pointer group text-left"
           >
             <span
               className={`w-1.5 h-1.5 rounded-full transition-colors ${

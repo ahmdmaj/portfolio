@@ -12,6 +12,9 @@ import { LightingSystem } from "./systems/LightingSystem";
 import { EffectsSystem } from "./systems/EffectsSystem";
 import { ProjectileSystem } from "./systems/ProjectileSystem";
 import { SlingshotInteractionSystem } from "./systems/SlingshotInteractionSystem";
+import { LampPendulumSystem } from "./systems/LampPendulumSystem";
+import { CollisionSystem } from "./systems/CollisionSystem";
+import { ShardsSystem } from "./systems/ShardsSystem";
 
 export class LampScene {
   // Core Three.js instances
@@ -33,6 +36,14 @@ export class LampScene {
   // Slingshot & Projectile Systems (Phase 5)
   public projectileSystem: ProjectileSystem | null = null;
   public slingshotInteraction: SlingshotInteractionSystem | null = null;
+
+  // Physics, Swept Collision & Pendulum Systems (Phase 6)
+  public lampPendulum: LampPendulumSystem | null = null;
+  public collisionSystem: CollisionSystem | null = null;
+
+  // Glass Shards & Shatter System (Phase 7)
+  public shardsSystem: ShardsSystem | null = null;
+  public isReplacingBulb: boolean = false;
 
   // Interaction & Raycasting (Phase 4 & 5)
   private raycaster: THREE.Raycaster = new THREE.Raycaster();
@@ -127,8 +138,10 @@ export class LampScene {
     // 5. Connect authoritative store synchronization for power & switch
     let isInitial = true;
     this.unsubscribeStore = this.store.subscribe((state) => {
-      const isOn = state.bulb === "on";
-      this.updatePowerState(isOn, !isInitial);
+      this.updatePowerState(state.switchOn, !isInitial);
+      if (state.bulb === "broken") {
+        this.lamp?.bulb.setBroken(true);
+      }
       isInitial = false;
     });
 
@@ -151,11 +164,13 @@ export class LampScene {
     // 8. Start the render loop
     this.start();
 
-    // 9. Automated verification hook for query parameters (?slingshot=draw or ?slingshot=flight)
+    // 9. Automated verification hook for query parameters
     if (typeof window !== "undefined") {
       try {
         const params = new URLSearchParams(window.location.search);
         const slingshotParam = params.get("slingshot");
+        const collisionParam = params.get("collision");
+
         if (slingshotParam === "draw" && this.slingshot) {
           const pullVector = new THREE.Vector3(-0.85, -0.92, 0);
           this.slingshot.updateBands(this.slingshot.restPouchPos.clone().add(pullVector));
@@ -170,6 +185,39 @@ export class LampScene {
           );
           const launchVel = new THREE.Vector3(8.5, 9.5, 0);
           this.projectileSystem.launch(launchOrigin, launchVel);
+        } else if (collisionParam === "swing" && this.lampPendulum) {
+          // Pose lamp swinging with angular displacement
+          this.lampPendulum.theta = 0.32;
+          this.lampPendulum.omega = 0.55;
+          this.lamp?.setRotation(0.32);
+        } else if (collisionParam === "switch" && this.projectileSystem && this.wallSwitch) {
+          // Pose projectile hitting switch rocker
+          const rockerPos = new THREE.Vector3();
+          this.wallSwitch.rockerMesh.getWorldPosition(rockerPos);
+          this.slingshot?.setStoneVisible(false);
+          this.projectileSystem.launch(
+            new THREE.Vector3(rockerPos.x - 0.2, rockerPos.y + 0.1, 0.15),
+            new THREE.Vector3(4.5, -1.5, 0)
+          );
+        } else if (collisionParam === "floor" && this.projectileSystem) {
+          // Pose projectile resting on floor after bounces
+          this.slingshot?.setStoneVisible(false);
+          const floorY = -this.dimensions.worldHeight / 2 + 0.35;
+          this.projectileSystem.launch(
+            new THREE.Vector3(0.5, floorY + 0.14, 0.15),
+            new THREE.Vector3(0, 0, 0)
+          );
+          this.projectileSystem.isSettling = true;
+        } else if (params.get("shatter") === "test" && this.lamp && this.shardsSystem) {
+          // Pose bulb shattering snapshot
+          const bulbCenter = this.lamp.bulb.getBulbWorldCenter();
+          this.lamp.bulb.setBroken(true);
+          this.shardsSystem.explode(bulbCenter, new THREE.Vector3(5.5, 4.0, 0));
+          this.updatePowerState(this.store.getState().switchOn, false);
+        } else if (params.get("replace") === "ready" && this.lamp) {
+          // Pose broken state ready for replacement
+          this.lamp.bulb.setBroken(true);
+          this.updatePowerState(this.store.getState().switchOn, false);
         }
       } catch {
         // Fallback for environments without location
@@ -218,6 +266,32 @@ export class LampScene {
       this.projectileSystem,
       this.store
     );
+
+    // 9. Phase 6 Lamp Pendulum System
+    this.lampPendulum = new LampPendulumSystem(this.lamp);
+
+    // 10. Phase 7 Glass Shards System
+    this.shardsSystem = new ShardsSystem(this.scene);
+
+    // 11. Phase 6 & 7 Swept Collision System
+    this.collisionSystem = new CollisionSystem(
+      this.lamp,
+      this.lampPendulum,
+      this.wallSwitch,
+      this.store,
+      {
+        onBulbHit: (contactPoint, velocity) => {
+          this.handleBulbHit(contactPoint, velocity);
+        },
+        onSwitchHit: () => {
+          this.callbacks.onSoundTrigger?.("switch");
+        },
+        onShadeHit: () => {
+          this.callbacks.onSoundTrigger?.("tonk");
+        },
+      }
+    );
+    this.projectileSystem.setCollisionSystem(this.collisionSystem);
   }
 
   /**
@@ -363,14 +437,17 @@ export class LampScene {
   };
 
   /**
-   * Updates rocker position, LED, and smoothly transitions lights and effects (Phase 4)
+   * Updates rocker position, LED, and smoothly transitions lights and effects (Phase 4 & 7)
    */
   public updatePowerState(isOn: boolean, animated = true): void {
     if (this.wallSwitch) {
       this.wallSwitch.setRockerState(isOn, animated);
     }
 
-    const targetFactor = isOn ? 1.0 : 0.0;
+    // Light only illuminates if the switch is ON and the bulb is not broken
+    const isLit = isOn && this.store.getState().bulb === "on";
+    const targetFactor = isLit ? 1.0 : 0.0;
+
     if (animated) {
       gsap.to(this.lightTransition, {
         factor: targetFactor,
@@ -378,19 +455,95 @@ export class LampScene {
         ease: "power2.inOut",
         overwrite: "auto",
         onUpdate: () => {
-          const f = this.lightTransition.factor;
-          this.lightingSystem?.setIntensity(f);
-          this.effectsSystem?.setIntensity(f);
-          this.lamp?.bulb.setIlluminated(f);
+          this.applyLightFactor(this.lightTransition.factor);
         },
       });
     } else {
       gsap.killTweensOf(this.lightTransition);
       this.lightTransition.factor = targetFactor;
-      this.lightingSystem?.setIntensity(targetFactor);
-      this.effectsSystem?.setIntensity(targetFactor);
-      this.lamp?.bulb.setIlluminated(targetFactor);
+      this.applyLightFactor(targetFactor);
     }
+  }
+
+  private applyLightFactor(factor: number): void {
+    this.lightingSystem?.setIntensity(factor);
+    this.effectsSystem?.setIntensity(factor);
+    if (this.store.getState().bulb !== "broken") {
+      this.lamp?.bulb.setIlluminated(factor);
+    } else {
+      this.lamp?.bulb.setIlluminated(0);
+    }
+  }
+
+  /**
+   * Handles bulb destruction: kills lights, explodes glass shards, sets broken mesh, increments store
+   */
+  public handleBulbHit(hitPoint: THREE.Vector3, stoneVelocity: THREE.Vector3): void {
+    if (this.store.getState().bulb === "broken") return;
+
+    // 1. Immediately cut all illumination
+    gsap.killTweensOf(this.lightTransition);
+    this.lightTransition.factor = 0;
+    this.applyLightFactor(0);
+
+    // 2. Mark 3D bulb as shattered (shows broken neck and leads)
+    this.lamp?.bulb.setBroken(true);
+
+    // 3. Trigger glass shards particle explosion and electrical spark flash
+    const bulbCenter = this.lamp?.bulb.getBulbWorldCenter() || hitPoint;
+    this.shardsSystem?.explode(bulbCenter, stoneVelocity);
+
+    // 4. Update authoritative store
+    this.store.incrementBulbs();
+
+    // 5. Fire audio/event hooks
+    this.callbacks.onBulbShatter?.();
+    this.callbacks.onSoundTrigger?.("shatter");
+  }
+
+  /**
+   * Interactive replacement sequence: clears shards, screws in fresh bulb, flickers on
+   */
+  public replaceBulb(onComplete?: () => void): void {
+    if (this.isReplacingBulb || this.store.getState().bulb !== "broken") return;
+    this.isReplacingBulb = true;
+
+    // 1. Fade out existing glass shards
+    this.shardsSystem?.clearShards(0.35);
+
+    // 2. Play 3D screw-in replacement animation
+    this.lamp?.bulb.animateReplacement(() => {
+      // 3. Authoritative store update
+      this.store.replaceBulb();
+      this.isReplacingBulb = false;
+
+      // 4. Restore illumination according to current physical switch state
+      if (this.store.getState().switchOn) {
+        this.playBulbFlickerOn();
+      } else {
+        this.applyLightFactor(0);
+      }
+
+      this.callbacks.onBulbReplaced?.();
+      onComplete?.();
+    });
+  }
+
+  /**
+   * Realistic electrical contact flicker when a new bulb is screwed into an energized socket
+   */
+  private playBulbFlickerOn(): void {
+    gsap.killTweensOf(this.lightTransition);
+    const tl = gsap.timeline({
+      onUpdate: () => this.applyLightFactor(this.lightTransition.factor),
+    });
+
+    this.lightTransition.factor = 0;
+    tl.to(this.lightTransition, { factor: 0.45, duration: 0.04, ease: "none" })
+      .to(this.lightTransition, { factor: 0.08, duration: 0.03, ease: "none" })
+      .to(this.lightTransition, { factor: 0.85, duration: 0.05, ease: "none" })
+      .to(this.lightTransition, { factor: 0.60, duration: 0.03, ease: "none" })
+      .to(this.lightTransition, { factor: 1.0, duration: 0.18, ease: "power2.out" });
   }
 
   /**
@@ -479,7 +632,12 @@ export class LampScene {
       );
     }
 
-    // 2. Update active projectile physics in 2.5D space (Phase 5)
+    // 2. Update physical lamp pendulum oscillation (Phase 6)
+    if (this.lampPendulum) {
+      this.lampPendulum.update(dt);
+    }
+
+    // 3. Update active projectile physics and swept collision (Phase 5 & 6)
     if (this.projectileSystem && this.projectileSystem.active) {
       const halfW = this.dimensions.worldWidth / 2;
       const halfH = this.dimensions.worldHeight / 2;
@@ -498,7 +656,24 @@ export class LampScene {
       );
     }
 
-    // 3. Render scene
+    // 4. Update glass shards particle explosion physics (Phase 7)
+    if (this.shardsSystem && this.shardsSystem.isActive) {
+      const floorY = -this.dimensions.worldHeight / 2 + 0.35;
+      this.shardsSystem.update(dt, floorY);
+    }
+
+    // 5. Broadcast screen-projected socket position for DOM replacement button (Phase 7)
+    if (this.callbacks.onSocketPositionChange && this.lamp && this.container) {
+      const socketWorldPos = this.lamp.bulb.getBulbWorldCenter();
+      const projected = socketWorldPos.clone().project(this.camera);
+      const rect = this.container.getBoundingClientRect();
+      const screenX = ((projected.x + 1) / 2) * rect.width;
+      const screenY = ((-projected.y + 1) / 2) * rect.height;
+      const visible = projected.z < 1 && screenX >= -50 && screenX <= rect.width + 50;
+      this.callbacks.onSocketPositionChange({ x: screenX, y: screenY, visible });
+    }
+
+    // 6. Render scene
     if (this.renderer) {
       this.renderer.render(this.scene, this.camera);
     }
@@ -563,6 +738,15 @@ export class LampScene {
     }
 
     // Dispose systems
+    if (this.lampPendulum) {
+      this.lampPendulum.dispose();
+      this.lampPendulum = null;
+    }
+
+    if (this.collisionSystem) {
+      this.collisionSystem = null;
+    }
+
     if (this.projectileSystem) {
       this.projectileSystem.dispose();
       this.projectileSystem = null;
@@ -581,6 +765,11 @@ export class LampScene {
     if (this.effectsSystem) {
       this.effectsSystem.dispose();
       this.effectsSystem = null;
+    }
+
+    if (this.shardsSystem) {
+      this.shardsSystem.dispose();
+      this.shardsSystem = null;
     }
 
     // Dispose physical objects

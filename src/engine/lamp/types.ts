@@ -2,6 +2,7 @@ export type BulbState = "on" | "off" | "broken";
 
 export interface LampState {
   bulb: BulbState;
+  switchOn: boolean; // physical rocker position: true = on, false = off
   shots: number;
   bulbs: number;
   soundEnabled: boolean;
@@ -27,10 +28,17 @@ export interface NormalizedAnchor {
   worldY: number;
 }
 
+export interface SocketScreenPosition {
+  x: number;
+  y: number;
+  visible: boolean;
+}
+
 export interface EngineCallbacks {
   onStateChange?: LampStateListener;
   onBulbShatter?: () => void;
   onBulbReplaced?: () => void;
   onSoundTrigger?: (sound: "switch" | "twang" | "tonk" | "shatter") => void;
+  onSocketPositionChange?: (pos: SocketScreenPosition) => void;
 }
 
