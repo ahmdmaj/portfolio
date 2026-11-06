@@ -33,8 +33,8 @@ export class EffectsSystem {
     const uvs: number[] = [];
     const indices: number[] = [];
 
-    const topWidth = 1.6;
-    const bottomWidth = 11.5;
+    const topWidth = 1.8;
+    const bottomWidth = 14.2;
     const height = 9.8;
 
     for (let r = 0; r <= rows; r++) {
@@ -97,19 +97,19 @@ export class EffectsSystem {
           float dx = abs(vUv.x - 0.5) * 2.0;
 
           // Pure mathematical Gaussian horizontal falloff (zero hard boundaries)
-          float gaussian = exp(-3.2 * dx * dx);
-          float edgeCut = smoothstep(1.0, 0.72, dx);
+          float gaussian = exp(-2.8 * dx * dx);
+          float edgeCut = smoothstep(1.0, 0.75, dx);
           float horizontalProfile = gaussian * edgeCut;
 
           // Vertical falloff: warm intense radiance at the lamp shade, smoothly decaying downwards
-          float verticalProfile = pow(vUv.y, 0.75) * smoothstep(0.0, 0.12, vUv.y);
+          float verticalProfile = pow(vUv.y, 0.70) * smoothstep(0.0, 0.10, vUv.y);
 
           // Core radiant warmth interpolation
-          float coreMix = pow(vUv.y, 1.2) * exp(-5.0 * dx * dx);
+          float coreMix = pow(vUv.y, 1.1) * exp(-4.2 * dx * dx);
           vec3 finalColor = mix(uColor, uColorCore, clamp(coreMix, 0.0, 1.0));
 
           // Calibrated opacity factor for rich moody contrast against #050607
-          float alpha = horizontalProfile * verticalProfile * 0.48 * uIntensity;
+          float alpha = horizontalProfile * verticalProfile * 0.52 * uIntensity;
 
           gl_FragColor = vec4(finalColor * alpha, alpha);
         }

@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import gsap from "gsap";
 import { CONFIG } from "../config";
 
 export class Switch {
@@ -7,16 +8,18 @@ export class Switch {
   public readonly rockerGroup: THREE.Group;
   public readonly rockerMesh: THREE.Mesh;
   public readonly ledMesh: THREE.Mesh;
+  public readonly labelMesh: THREE.Mesh;
 
   private geometries: THREE.BufferGeometry[] = [];
   private materials: THREE.Material[] = [];
   private labelTexture: THREE.CanvasTexture | null = null;
+  private rockerMat: THREE.MeshStandardMaterial;
+  private ledMat: THREE.MeshStandardMaterial;
 
   constructor() {
     this.group = new THREE.Group();
 
     // 1. Switch backplate (wall mounted plate)
-    // Layered plate with subtle bevel profile
     const plateWidth = 0.95;
     const plateHeight = 1.45;
     const plateDepth = 0.12;
@@ -60,16 +63,16 @@ export class Switch {
     const rockerGeom = new THREE.BoxGeometry(rockerWidth, rockerHeight, rockerDepth);
     this.geometries.push(rockerGeom);
 
-    const rockerMat = new THREE.MeshStandardMaterial({
+    this.rockerMat = new THREE.MeshStandardMaterial({
       color: 0x25262a,
       roughness: 0.46,
       metalness: 0.35,
     });
-    this.materials.push(rockerMat);
+    this.materials.push(this.rockerMat);
 
-    this.rockerMesh = new THREE.Mesh(rockerGeom, rockerMat);
+    this.rockerMesh = new THREE.Mesh(rockerGeom, this.rockerMat);
     this.rockerMesh.castShadow = true;
-    // Pivot rocker slightly upward for default "ON" state
+    // Pivot rocker upward for default "ON" state (-0.28 rad)
     this.rockerMesh.rotation.x = -CONFIG.wallSwitch.rockerAngleMax;
     this.rockerGroup.add(this.rockerMesh);
 
@@ -78,16 +81,16 @@ export class Switch {
     ledGeom.rotateX(Math.PI / 2);
     this.geometries.push(ledGeom);
 
-    const ledMat = new THREE.MeshStandardMaterial({
-      color: 0x22c55e,
-      emissive: 0x22c55e,
+    this.ledMat = new THREE.MeshStandardMaterial({
+      color: CONFIG.colors.ledOn,
+      emissive: CONFIG.colors.ledOn,
       emissiveIntensity: 1.2,
       roughness: 0.3,
       metalness: 0.2,
     });
-    this.materials.push(ledMat);
+    this.materials.push(this.ledMat);
 
-    this.ledMesh = new THREE.Mesh(ledGeom, ledMat);
+    this.ledMesh = new THREE.Mesh(ledGeom, this.ledMat);
     this.ledMesh.position.set(0, 0.22, rockerDepth / 2 + 0.01);
     this.rockerMesh.add(this.ledMesh);
 
@@ -105,9 +108,9 @@ export class Switch {
     });
     this.materials.push(labelMat);
 
-    const labelMesh = new THREE.Mesh(labelGeom, labelMat);
-    labelMesh.position.set(0, 0, rockerDepth / 2 + 0.012);
-    this.rockerMesh.add(labelMesh);
+    this.labelMesh = new THREE.Mesh(labelGeom, labelMat);
+    this.labelMesh.position.set(0, 0, rockerDepth / 2 + 0.012);
+    this.rockerMesh.add(this.labelMesh);
 
     // 6. Two subtle industrial wall plate mounting screws
     const screwGeom = new THREE.CylinderGeometry(0.04, 0.04, 0.02, 16);
@@ -160,25 +163,53 @@ export class Switch {
     this.group.position.set(x, y, 0);
   }
 
-  public setRockerState(isOn: boolean): void {
+  /**
+   * Sets rocker visual state (ON = -0.28 rad, OFF = +0.28 rad) with smooth GSAP transition
+   */
+  public setRockerState(isOn: boolean, animated = true): void {
     const targetAngle = isOn
       ? -CONFIG.wallSwitch.rockerAngleMax
       : CONFIG.wallSwitch.rockerAngleMax;
-    this.rockerMesh.rotation.x = targetAngle;
 
-    const ledMat = this.ledMesh.material as THREE.MeshStandardMaterial;
-    if (isOn) {
-      ledMat.color.setHex(CONFIG.colors.ledOn);
-      ledMat.emissive.setHex(CONFIG.colors.ledOn);
-      ledMat.emissiveIntensity = 1.2;
+    if (animated) {
+      gsap.to(this.rockerMesh.rotation, {
+        x: targetAngle,
+        duration: 0.22,
+        ease: "power2.out",
+        overwrite: "auto",
+      });
     } else {
-      ledMat.color.setHex(CONFIG.colors.ledOff);
-      ledMat.emissive.setHex(CONFIG.colors.ledOff);
-      ledMat.emissiveIntensity = 0.4;
+      gsap.killTweensOf(this.rockerMesh.rotation);
+      this.rockerMesh.rotation.x = targetAngle;
+    }
+
+    // Update LED status indicator
+    if (isOn) {
+      this.ledMat.color.setHex(CONFIG.colors.ledOn);
+      this.ledMat.emissive.setHex(CONFIG.colors.ledOn);
+      this.ledMat.emissiveIntensity = 1.2;
+    } else {
+      this.ledMat.color.setHex(CONFIG.colors.ledOff);
+      this.ledMat.emissive.setHex(CONFIG.colors.ledOff);
+      this.ledMat.emissiveIntensity = 0.45;
+    }
+  }
+
+  /**
+   * Subtle pointer hover feedback on the rocker switch
+   */
+  public setHovered(hovered: boolean): void {
+    if (hovered) {
+      this.rockerMat.emissive.setHex(0x22252c);
+      this.rockerMat.emissiveIntensity = 0.85;
+    } else {
+      this.rockerMat.emissive.setHex(0x000000);
+      this.rockerMat.emissiveIntensity = 0.0;
     }
   }
 
   public dispose(): void {
+    gsap.killTweensOf(this.rockerMesh.rotation);
     if (this.labelTexture) {
       this.labelTexture.dispose();
       this.labelTexture = null;
@@ -190,4 +221,3 @@ export class Switch {
     this.group.clear();
   }
 }
-

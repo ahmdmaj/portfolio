@@ -67,6 +67,12 @@ export const LampExperience: React.FC = () => {
     }
   };
 
+  const handleTogglePower = () => {
+    if (engineRef.current) {
+      engineRef.current.store.toggleSwitch();
+    }
+  };
+
   if (!hasWebGL) {
     return <LampFallback />;
   }
@@ -80,7 +86,11 @@ export const LampExperience: React.FC = () => {
       <div className="absolute inset-0 bg-grid-pattern pointer-events-none z-10 opacity-60" />
 
       {/* Top HUD & Navigation */}
-      <LampHUD state={lampState} onToggleSound={handleToggleSound} />
+      <LampHUD
+        state={lampState}
+        onToggleSound={handleToggleSound}
+        onTogglePower={handleTogglePower}
+      />
 
       {/* Upper-Center Small Monospace Time Label under Lamp */}
       <div className="absolute left-1/2 -translate-x-1/2 top-[30vh] sm:top-[32vh] pointer-events-none z-20">

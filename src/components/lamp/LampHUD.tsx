@@ -8,9 +8,10 @@ import { LampState } from "@/engine/lamp/types";
 interface LampHUDProps {
   state: LampState;
   onToggleSound: () => void;
+  onTogglePower?: () => void;
 }
 
-export const LampHUD: React.FC<LampHUDProps> = ({ state, onToggleSound }) => {
+export const LampHUD: React.FC<LampHUDProps> = ({ state, onToggleSound, onTogglePower }) => {
   const getStatusColor = () => {
     switch (state.bulb) {
       case "on":
@@ -34,14 +35,31 @@ export const LampHUD: React.FC<LampHUDProps> = ({ state, onToggleSound }) => {
         </Link>
 
         <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3 text-[11px] text-muted/80">
-          <div className="flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-            <span className="text-text font-medium">{COPY.hud.title}</span>
+          <button
+            type="button"
+            onClick={onTogglePower}
+            disabled={state.bulb === "broken"}
+            title="Click to toggle switch (or click 3D wall switch on the right)"
+            aria-label={`Toggle wall switch. Current state: ${state.bulb}`}
+            className="flex items-center gap-1.5 hover:opacity-80 transition-opacity focus:outline-none cursor-pointer disabled:cursor-not-allowed group text-left"
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full transition-colors ${
+                state.bulb === "on"
+                  ? "bg-accent shadow-[0_0_8px_rgba(224,184,122,0.8)]"
+                  : state.bulb === "broken"
+                  ? "bg-red-500"
+                  : "bg-muted/40"
+              }`}
+            />
+            <span className="text-text font-medium group-hover:text-accent transition-colors">
+              {COPY.hud.title}
+            </span>
             <span>·</span>
-            <span className={`uppercase font-semibold ${getStatusColor()}`}>
+            <span className={`uppercase font-semibold tracking-wide transition-colors ${getStatusColor()}`}>
               {state.bulb}
             </span>
-          </div>
+          </button>
 
           <span className="hidden sm:inline text-muted/40">/</span>
 
@@ -63,7 +81,7 @@ export const LampHUD: React.FC<LampHUDProps> = ({ state, onToggleSound }) => {
           onClick={onToggleSound}
           type="button"
           aria-label={state.soundEnabled ? "Mute audio" : "Unmute audio"}
-          className="px-3 py-1.5 rounded-full border border-muted/20 bg-bg/40 backdrop-blur-sm text-[11px] text-muted hover:text-text hover:border-accent/50 transition-all flex items-center gap-2"
+          className="px-3 py-1.5 rounded-full border border-muted/20 bg-bg/40 backdrop-blur-sm text-[11px] text-muted hover:text-text hover:border-accent/50 transition-all flex items-center gap-2 cursor-pointer"
         >
           <span
             className={`w-1.5 h-1.5 rounded-full transition-colors ${
@@ -76,4 +94,3 @@ export const LampHUD: React.FC<LampHUDProps> = ({ state, onToggleSound }) => {
     </header>
   );
 };
-

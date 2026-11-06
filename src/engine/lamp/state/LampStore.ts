@@ -18,6 +18,15 @@ export class LampStore {
       if (stored !== null) {
         this.state.soundEnabled = stored === "true";
       }
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const urlBulb = params.get("bulb");
+        if (urlBulb === "off" || urlBulb === "on") {
+          this.state.bulb = urlBulb;
+        }
+      } catch {
+        // Fallback for environments without location search
+      }
     }
   }
 

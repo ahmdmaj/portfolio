@@ -6,6 +6,8 @@ export class Bulb {
   public readonly bulbMesh: THREE.Mesh;
   private readonly socketBaseMesh: THREE.Mesh;
   private readonly filamentMesh: THREE.LineSegments;
+  private bulbMat: THREE.MeshStandardMaterial;
+  private filamentMat: THREE.LineBasicMaterial;
 
   private geometries: THREE.BufferGeometry[] = [];
   private materials: THREE.Material[] = [];
@@ -43,7 +45,7 @@ export class Bulb {
     const bulbGeom = new THREE.LatheGeometry(bulbPoints, 32);
     this.geometries.push(bulbGeom);
 
-    const bulbMat = new THREE.MeshStandardMaterial({
+    this.bulbMat = new THREE.MeshStandardMaterial({
       color: 0xffeed1,
       emissive: CONFIG.colors.bulbWarm,
       emissiveIntensity: 1.35,
@@ -52,9 +54,9 @@ export class Bulb {
       transparent: true,
       opacity: 0.94,
     });
-    this.materials.push(bulbMat);
+    this.materials.push(this.bulbMat);
 
-    this.bulbMesh = new THREE.Mesh(bulbGeom, bulbMat);
+    this.bulbMesh = new THREE.Mesh(bulbGeom, this.bulbMat);
     this.group.add(this.bulbMesh);
 
     // 3. Subtle internal tungsten filament inside the bulb
@@ -68,16 +70,26 @@ export class Bulb {
     const filamentGeom = new THREE.BufferGeometry().setFromPoints(filamentPoints);
     this.geometries.push(filamentGeom);
 
-    const filamentMat = new THREE.LineBasicMaterial({
+    this.filamentMat = new THREE.LineBasicMaterial({
       color: 0xffaa44,
       transparent: true,
       opacity: 0.7,
       linewidth: 1,
     });
-    this.materials.push(filamentMat);
+    this.materials.push(this.filamentMat);
 
-    this.filamentMesh = new THREE.LineSegments(filamentGeom, filamentMat);
+    this.filamentMesh = new THREE.LineSegments(filamentGeom, this.filamentMat);
     this.group.add(this.filamentMesh);
+  }
+
+  /**
+   * Sets illumination factor [0.0 = off, 1.0 = on] for switch transitions
+   */
+  public setIlluminated(factor: number): void {
+    const clamped = Math.max(0, Math.min(1.5, factor));
+    this.bulbMat.emissiveIntensity = 1.35 * clamped;
+    this.bulbMat.color.setHex(clamped > 0.05 ? 0xffeed1 : 0x4a4d55);
+    this.filamentMat.opacity = 0.12 + 0.58 * clamped;
   }
 
   public getBulbWorldCenter(): THREE.Vector3 {
@@ -95,4 +107,3 @@ export class Bulb {
     this.group.clear();
   }
 }
-

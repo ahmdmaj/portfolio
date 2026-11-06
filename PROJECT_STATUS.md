@@ -1,6 +1,6 @@
 # Project Status — Interactive Three.js Portfolio: Slingshot Lamp
 
-## Current Phase: PHASE 2 — COMPLETE & VERIFIED
+## Current Phase: PHASE 3 — COMPLETE & VERIFIED
 
 ### Architecture & Foundation Overview
 - **Framework**: Next.js 14 App Router (React 18, TypeScript strict mode)
@@ -14,22 +14,21 @@
 - **Graphics Core**: Vanilla Three.js (`three@0.187.0`), client-only dynamic loading (`ssr: false`)
 - **State Store**: Decoupled `LampStore` (single source of truth for bulb state, counters, audio preferences, drag state)
 - **Coordinate System**: Normalized viewport anchors (`CoordinateUtils`) with automatic desktop/mobile responsive scaling
+- **Lighting Core**: Decoupled `LightingSystem` (calibrated SpotLight, PointLight local fill, directional key/rim/fill) + `EffectsSystem` (Gaussian planar light beam on wall, incandescent bulb glow halo, dynamic CSS variable synchronization)
 
 ---
 
-### Phase 2 Implementation & Verification Checklist
+### Phase 3 Implementation & Verification Checklist
 
-| Physical Object / System | Geometry & Material Choice | Positioning & Scale | Status |
+| Lighting & Atmospheric Component | Implementation Details | Target & Behavior | Status |
 | :--- | :--- | :--- | :---: |
-| **A. Wall Background** | Large planar mesh (`PlaneGeometry(30, 20)`), `MeshStandardMaterial` (roughness 0.95, near-black `#050607`) | Centered at $z = -1.5$, covers entire viewport frustum | ✅ Complete |
-| **B. Hanging Lamp** | Braided black cable, brass relief ferrule, industrial dome shade via `LatheGeometry` with rolled lip & thickness | Upper center anchor ($nx: 0, ny: 0.96$), shade at ~28% viewport height | ✅ Complete |
-| **C. Metallic Lamp Shade** | Double-sided brushed graphite metal (`MeshStandardMaterial`, roughness 0.32, metalness 0.88) | Integrated into swinging pivot group | ✅ Complete |
-| **D. Bulb Socket** | Industrial bakelite/metal cylinder with brass threaded collar | Located at bottom of pendant cable | ✅ Complete |
-| **E. Bulb** | Pear-shaped incandescent envelope (`LatheGeometry`) with warm emissive glow (`0xffeed1`, emissive `#ffb866`, intensity 1.35) and tungsten filament | Seated inside the socket beneath the shade | ✅ Complete |
-| **F. Wall Switch** | Layered dark charcoal switch plate, tilting central rocker, green status LED indicator (`#22c55e`), procedural high-DPI "ON"/"OFF" markings, mounting screws | Right side anchor ($nx: 0.78, ny: 0.05$ on desktop; $nx: 0.40, ny: -0.20$ on mobile) | ✅ Complete |
-| **G. Wooden Slingshot** | Natural walnut Y-shaped fork using `TubeGeometry` along 3D CatmullRom splines, straight vertical handle, dark leather pouch, surgical amber latex bands | Bottom-left anchor ($nx: -0.72, ny: -0.68$ on desktop; $nx: -0.52, ny: -0.66$ on mobile) | ✅ Complete |
-| **H. Pebble Projectile** | Organic tumbled stone via perturbed `IcosahedronGeometry` (roughness 0.88, muted grey `#71717a`) | Resting securely inside slingshot leather pouch | ✅ Complete |
-| **Lighting (Static)** | Ambient (0.65), Key light (1.15), Soft fill (0.45), Top rim light (0.85) | Sculpting physical contours and specular highlights without shaders | ✅ Complete |
+| **A. Primary Downward Illumination** | `THREE.SpotLight` attached to `lampSocketGroup` (intensity 14.0, distance 22.0, angle $\pi / 3.4$, penumbra 0.85, quadratic decay) | Illuminates physical 3D scene objects; naturally sways with lamp pendulum | ✅ Complete |
+| **B. Local Bulb Glow PointLight** | `THREE.PointLight` at bulb center $(0, -0.62, 0.12)$ (intensity 5.0, distance 4.5, decay 2.0) | Provides soft 360° local warmth to bulb envelope and brass socket | ✅ Complete |
+| **C. Industrial Shade Rim Light** | `THREE.DirectionalLight` positioned behind the lamp $(0, 7.5, -2.5)$ (intensity 0.45, white) | Sculptures the top metallic edge without washing out the front graphite face | ✅ Complete |
+| **D. Ambient & Key Illumination** | Ambient $(0x0a0c12, 0.25)$ + Key light at $(-4.0, 5.5, 5.0, 0.55)$ + Warm bounce fill $(3.5, -1.8, 4.5, 0.20)$ | Preserves deep `#050607` background while maintaining tactile geometry detail | ✅ Complete |
+| **E. Planar Light Beam on Wall** | Subdivided parametric trapezoid ($24 \times 24$ mesh) in front of wall $(z = -1.35)$ with mathematical Gaussian falloff `exp(-2.8 * dx^2)` | Warm golden radiance behind typography; 0 hard cutoff boundaries; sways with pendulum | ✅ Complete |
+| **F. Incandescent Optical Bloom** | Camera-facing glow quad at $(0, -0.62, 0.22)$ with radial exponential falloff `exp(-3.6 * r^2)` | Smooth incandescent halo surrounding tungsten filament | ✅ Complete |
+| **G. Dynamic CSS Illumination Sync** | Live calculation of lamp screen position and intensity projected to `--light-x` and `--light-i` | DOM typography dynamically aligns with physical lamp position and intensity | ✅ Complete |
 
 ---
 
@@ -37,7 +36,7 @@
 
 - [x] **PHASE 1**: Foundation, Coordinate Architecture & Initial Visual Composition
 - [x] **PHASE 2**: Static 3D Environment & Lamp Construction (pendant cord, dome shade, socket, bulb, switch, slingshot, stone)
-- [ ] **PHASE 3**: Lighting, Glow, Atmosphere & Post-Processing (volumetric cone shader, UnrealBloomPass, CSS light mask sync)
+- [x] **PHASE 3**: Lighting, Glow, Atmosphere & Post-Processing (SpotLight, PointLight, Gaussian light beam, bulb halo, CSS sync)
 - [ ] **PHASE 4**: Interactive Wall Switch (3D switch plate, rocker animation, canvas labels, raycasting)
 - [ ] **PHASE 5**: Slingshot & Projectile Mechanics (wooden Y fork, elastic band cylinders, stone pull/launch)
 - [ ] **PHASE 6**: Physics & Swept Collision Detection (fixed 1/120s timestep, shade angular impulse, floor bounce)
