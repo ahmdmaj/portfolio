@@ -51,6 +51,12 @@ export const LampExperience: React.FC = () => {
 
     engine.mount(containerRef.current);
     engineRef.current = engine;
+    setLampState(engine.store.getState());
+
+    if (typeof window !== "undefined") {
+      (window as unknown as Record<string, unknown>).__lampEngine = engine;
+      (window as unknown as Record<string, unknown>).__lampStore = engine.store;
+    }
 
     // 3. Cleanup on unmount
     return () => {

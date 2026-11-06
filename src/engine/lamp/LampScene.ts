@@ -118,9 +118,11 @@ export class LampScene {
     this.setupInteraction();
 
     // 5. Connect authoritative store synchronization for power & switch
+    let isInitial = true;
     this.unsubscribeStore = this.store.subscribe((state) => {
       const isOn = state.bulb === "on";
-      this.updatePowerState(isOn, true);
+      this.updatePowerState(isOn, !isInitial);
+      isInitial = false;
     });
 
     // 6. Setup ResizeObserver

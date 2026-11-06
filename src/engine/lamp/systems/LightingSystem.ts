@@ -24,7 +24,7 @@ export class LightingSystem {
   private baseBulbIntensity = 5.0;
   private baseAmbientIntensity = 0.25;
   private baseKeyIntensity = 0.55;
-  private baseRimIntensity = 0.45;
+  private baseRimIntensity = 0.32;
   private baseFillIntensity = 0.20;
 
   private currentIntensityFactor = 1.0;

@@ -100,9 +100,9 @@ export class Lamp {
     this.geometries.push(shadeGeom);
 
     const shadeMat = new THREE.MeshStandardMaterial({
-      color: 0x32343a, // Industrial brushed graphite metal with subtle sheen
-      roughness: 0.32,
-      metalness: 0.88,
+      color: 0x24262b, // Industrial brushed graphite metal with soft matte sheen
+      roughness: 0.52,
+      metalness: 0.65,
       side: THREE.DoubleSide,
     });
     this.materials.push(shadeMat);
