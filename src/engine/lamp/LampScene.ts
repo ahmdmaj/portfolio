@@ -7,6 +7,8 @@ import { Wall } from "./objects/Wall";
 import { Lamp } from "./objects/Lamp";
 import { Switch } from "./objects/Switch";
 import { Slingshot } from "./objects/Slingshot";
+import { LightingSystem } from "./systems/LightingSystem";
+import { EffectsSystem } from "./systems/EffectsSystem";
 
 export class LampScene {
   // Core Three.js instances
@@ -15,16 +17,15 @@ export class LampScene {
   private renderer: THREE.WebGLRenderer | null = null;
   private container: HTMLElement | null = null;
 
-  // Scene Objects
+  // Physical Scene Objects
   public wall: Wall | null = null;
   public lamp: Lamp | null = null;
   public wallSwitch: Switch | null = null;
   public slingshot: Slingshot | null = null;
 
-  // Scene Lights (Static environment illumination for Phase 2)
-  private ambientLight: THREE.AmbientLight | null = null;
-  private keyLight: THREE.DirectionalLight | null = null;
-  private fillLight: THREE.DirectionalLight | null = null;
+  // Lighting & Atmospheric Systems (Phase 3)
+  public lightingSystem: LightingSystem | null = null;
+  public effectsSystem: EffectsSystem | null = null;
 
   // Animation & Lifecycle
   private animationFrameId: number | null = null;
@@ -55,7 +56,7 @@ export class LampScene {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(CONFIG.colors.bg);
 
-    // Initialize Orthographic Camera (units will be updated upon mount & resize)
+    // Initialize Orthographic Camera (units will be sized upon mount & resize)
     this.camera = new THREE.OrthographicCamera(-5, 5, 5, -5, CONFIG.viewport.near, CONFIG.viewport.far);
     this.camera.position.set(0, 0, 10);
     this.camera.lookAt(0, 0, 0);
@@ -75,7 +76,7 @@ export class LampScene {
     }
     this.container = container;
 
-    // 1. Initialize WebGL Renderer
+    // 1. Initialize WebGL Renderer with High-Performance Settings and Soft Shadow Mapping
     this.renderer = new THREE.WebGLRenderer({
       antialias: true,
       alpha: false,
@@ -88,12 +89,16 @@ export class LampScene {
     this.renderer.toneMappingExposure = 1.0;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
 
+    // Enable soft shadow mapping (PCFSoftShadowMap)
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
     const canvas = this.renderer.domElement;
     canvas.className = "three-canvas w-full h-full absolute inset-0";
     canvas.setAttribute("touch-action", "none");
     this.container.appendChild(canvas);
 
-    // 2. Setup static 3D environment & physical objects (Phase 2)
+    // 2. Setup 3D environment & physical objects
     this.setupEnvironment();
 
     // 3. Setup initial sizing, camera & object positions
@@ -120,43 +125,36 @@ export class LampScene {
   }
 
   /**
-   * Constructs the physical 3D environment: Wall, Lamp, Switch, Slingshot, and balanced lighting
+   * Constructs the physical 3D environment and initializes Phase 3 Lighting & Effects systems
    */
   private setupEnvironment(): void {
-    // 1. Balanced ambient and directional lighting for material definition
-    this.ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
-    this.scene.add(this.ambientLight);
-
-    // Key directional light creating soft specular glints on brushed metal and wood
-    this.keyLight = new THREE.DirectionalLight(0xffeedd, 1.15);
-    this.keyLight.position.set(-3.5, 6, 7);
-    this.scene.add(this.keyLight);
-
-    // Soft warm fill light from lower right
-    this.fillLight = new THREE.DirectionalLight(CONFIG.colors.accent, 0.45);
-    this.fillLight.position.set(4, -2, 5);
-    this.scene.add(this.fillLight);
-
-    // Top rim light to sculpt the metallic lamp shade silhouette
-    const rimLight = new THREE.DirectionalLight(0xffffff, 0.85);
-    rimLight.position.set(0, 7, 1);
-    this.scene.add(rimLight);
-
-    // 2. Wall background
+    // 1. Wall background (receives shadows & light falloff)
     this.wall = new Wall(30, 20);
     this.scene.add(this.wall.group);
 
-    // 3. Hanging Industrial Lamp (with socket and bulb)
+    // 2. Hanging Industrial Lamp (with socket and bulb)
     this.lamp = new Lamp(CONFIG.lamp.cordLength);
     this.scene.add(this.lamp.group);
 
-    // 4. Wall Switch
+    // 3. Wall Switch
     this.wallSwitch = new Switch();
     this.scene.add(this.wallSwitch.group);
 
-    // 5. Wooden Slingshot with Pebble
+    // 4. Wooden Slingshot with Pebble
     this.slingshot = new Slingshot();
     this.scene.add(this.slingshot.group);
+
+    // 5. Phase 3 Lighting System (PointLight at bulb center + key/rim/fill lights)
+    this.lightingSystem = new LightingSystem({
+      scene: this.scene,
+      lampSocketGroup: this.lamp.socketGroup,
+    });
+
+    // 6. Phase 3 Effects System (subtle translucent volumetric light cone & bulb glow aura)
+    this.effectsSystem = new EffectsSystem({
+      scene: this.scene,
+      lampSocketGroup: this.lamp.socketGroup,
+    });
   }
 
   /**
@@ -235,6 +233,15 @@ export class LampScene {
     const now = performance.now();
     this.lastTime = now;
 
+    // Sync CSS illumination variables (--light-x, --light-i) for DOM typography
+    if (this.effectsSystem && this.lamp) {
+      this.effectsSystem.updateDOMIllumination(
+        this.lamp.getSocketWorldPosition(),
+        this.camera,
+        this.dimensions.width
+      );
+    }
+
     if (this.renderer) {
       this.renderer.render(this.scene, this.camera);
     }
@@ -279,6 +286,17 @@ export class LampScene {
       this.resizeObserver = null;
     }
 
+    // Dispose lighting & effects systems
+    if (this.lightingSystem) {
+      this.lightingSystem.dispose();
+      this.lightingSystem = null;
+    }
+
+    if (this.effectsSystem) {
+      this.effectsSystem.dispose();
+      this.effectsSystem = null;
+    }
+
     // Dispose physical objects
     if (this.wall) {
       this.wall.dispose();
@@ -298,23 +316,6 @@ export class LampScene {
     if (this.slingshot) {
       this.slingshot.dispose();
       this.slingshot = null;
-    }
-
-    // Clear lights
-    if (this.ambientLight) {
-      this.scene.remove(this.ambientLight);
-      this.ambientLight.dispose();
-      this.ambientLight = null;
-    }
-    if (this.keyLight) {
-      this.scene.remove(this.keyLight);
-      this.keyLight.dispose();
-      this.keyLight = null;
-    }
-    if (this.fillLight) {
-      this.scene.remove(this.fillLight);
-      this.fillLight.dispose();
-      this.fillLight = null;
     }
 
     if (this.renderer) {
